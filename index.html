@@ -473,7 +473,7 @@ alter publication supabase_realtime add table log_entries;</div>
     </div>
     <div class="inv-wrap">
       <table><thead><tr>
-        <th>ID</th><th>Article</th><th>Emplacement</th>
+        <th>ID</th><th>Article</th>
         <th style="text-align:center">Qté totale</th>
         <th style="text-align:center">Disponible</th>
         <th>Statut</th>
@@ -1168,11 +1168,11 @@ function renderTable(){
   const st=document.getElementById('fst').value;
   let f=items.filter(i=>(!q||i.name.toLowerCase().includes(q)||i.id.toLowerCase().includes(q))&&(!loc||i.loc.includes(loc))&&(!st||i.status===st));
   const tb=document.getElementById('inv-tbody');tb.innerHTML='';
-  if(!f.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">Aucun article trouvé.</td></tr>';return;}
+  if(!f.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)">Aucun article trouvé.</td></tr>';return;}
   let ls='';
   f.forEach(it=>{
     const sec=it.id.split('-')[0],sl=SECS[sec]||sec;
-    if(sl!==ls){const r=document.createElement('tr');r.className='ssep';r.innerHTML=`<td colspan="6">▸ ${sl}</td>`;tb.appendChild(r);ls=sl;}
+    if(sl!==ls){const r=document.createElement('tr');r.className='ssep';r.innerHTML=`<td colspan="5">▸ ${sl}</td>`;tb.appendChild(r);ls=sl;}
     const tr=document.createElement('tr');
     const pct=(it.qty>0&&it.avail!==null)?it.avail/it.qty:1;
     const qc=it.avail===null?'':pct<0.25?'qty-low':'qty-ok';
@@ -1198,7 +1198,6 @@ function renderTable(){
     }
     tr.className = 'inv-row';
     tr.innerHTML=`<td class="id">${it.id}</td><td><strong style="font-weight:500">${it.name}</strong> <button onclick=\"event.stopPropagation();quickRename(this.dataset.iid)\" data-iid=\"" + it.id + "\" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:2px 5px;border-radius:4px;margin-left:4px;" title="Rename" onmouseover="this.style.color='var(--mid)'" onmouseout="this.style.color='var(--muted)'">✏️</button></td>
-      <td style="color:var(--muted);font-size:.85rem">${it.loc||'—'}</td>
       <td class="qty">${it.qty!==null?it.qty:'—'}</td>
       <td class="qty ${qc}"><div class="qty-edit">
         <button class="qty-btn" onclick="event.stopPropagation();chAvail('${it.id}',-1)">−</button>
@@ -1211,7 +1210,7 @@ function renderTable(){
     // Breakdown row
     const btr = document.createElement('tr');
     btr.className = 'breakdown-row';
-    (function(itemId){ btr.innerHTML = '<td colspan="6"><div class="breakdown-panel" id="bd-' + itemId + '"></div></td>'; })(it.id);
+    (function(itemId){ btr.innerHTML = '<td colspan="5"><div class="breakdown-panel" id="bd-' + itemId + '"></div></td>'; })(it.id);
     tb.appendChild(btr);
   });
 }
@@ -1972,4 +1971,3 @@ initApp();
 </div>
 </body>
 </html>
- 
