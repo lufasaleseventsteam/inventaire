@@ -357,11 +357,11 @@ alter publication supabase_realtime add table log_entries;</div>
     <button id="lang-toggle" onclick="toggleLang()" style="padding:4px 12px;border-radius:20px;border:1.5px solid rgba(255,255,255,.25);background:transparent;color:#a0bcdc;font-size:.75rem;cursor:pointer;font-family:'EB Garamond',Georgia,serif;transition:all .15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#a0bcdc'">EN</button>
     <span id="sync-pill" class="sync-pill loading">⏳ Connexion…</span>
     <div class="tab-bar">
-      <button class="tab active" onclick="showTab('mouvement',this)">Mouvement</button>
-      <button class="tab" onclick="checkInventairePin(this)">Inventaire</button>
-      <button class="tab" onclick="showTab('signaler',this)">⚠ Signaler <span class="bdot" id="bdot"></span></button>
-      <button class="tab" onclick="showTab('journal',this)">Journal</button>
-      <button class="tab" onclick="showTab('quiaquoi',this)">👤 Qui a quoi</button>
+      <button id="top-tab-mouvement" class="tab active" onclick="showTab('mouvement',this)">Mouvement</button>
+      <button id="top-tab-inventaire" class="tab" onclick="checkInventairePin(this)">Inventaire</button>
+      <button id="top-tab-signaler" class="tab" onclick="showTab('signaler',this)"><span id="lbl-tab-signaler">⚠ Signaler</span> <span class="bdot" id="bdot"></span></button>
+      <button id="top-tab-journal" class="tab" onclick="showTab('journal',this)">Journal</button>
+      <button id="top-tab-quiaquoi" class="tab" onclick="showTab('quiaquoi',this)">👤 Qui a quoi</button>
       <button class="tab" id="tab-btn-admin" onclick="checkAdminPin(this)">⚙ Admin</button>
     </div>
   </div>
@@ -869,12 +869,14 @@ function showTab(id,btn){
 function renderStats(){
   const broken=damages.filter(d=>!d.resolved).length;
   const out=items.filter(i=>i.avail!==null&&i.qty!==null&&i.avail<i.qty).length;
+  const lowStock=items.filter(i=>i.avail!==null&&i.avail<=2&&i.avail>0).length;
   document.getElementById('stats-row').innerHTML=`
-    <div class="stat-card sc-a"><div class="num">${items.length}</div><div class="lbl">Articles</div></div>
-    <div class="stat-card"><div class="num">${items.filter(i=>i.avail===null||i.avail>0).length}</div><div class="lbl">En stock</div></div>
-    <div class="stat-card sc-w"><div class="num">${out}</div><div class="lbl">Partiellement sortis</div></div>
-    <div class="stat-card sc-o"><div class="num">${broken}</div><div class="lbl"><span id="lbl-open-reports">Signalements ouverts</span></div></div>
-    <div class="stat-card sc-d"><div class="num">${items.filter(i=>i.status==='À commander').length}</div><div class="lbl">À commander</div></div>`;
+    <div class="stat-card sc-a"><div class="num">${items.length}</div><div class="lbl">${t('stats_items')}</div></div>
+    <div class="stat-card"><div class="num">${items.filter(i=>i.avail===null||i.avail>0).length}</div><div class="lbl">${t('stats_instock')}</div></div>
+    <div class="stat-card sc-w"><div class="num">${out}</div><div class="lbl">${t('stats_partial')}</div></div>
+    <div class="stat-card sc-o"><div class="num">${broken}</div><div class="lbl">${t('stats_reports')}</div></div>
+    <div class="stat-card sc-d"><div class="num">${items.filter(i=>i.status==='À commander').length}</div><div class="lbl">${t('stats_order')}</div></div>
+    ${lowStock>0?`<div class="stat-card" style="border-color:var(--amber);"><div class="num" style="color:var(--amber);">${lowStock}</div><div class="lbl">${t('stats_lowstock')}</div></div>`:''}`;
   document.getElementById('bdot').classList.toggle('show',broken>0);
   const bdot2=document.getElementById('bdot2'); if(bdot2) bdot2.classList.toggle('show',broken>0);
 }
@@ -1662,19 +1664,12 @@ function applyLang(){
   const tabs = document.querySelectorAll('.tab');
   const tabKeys = ['tab_mouvement','tab_inventaire','tab_signaler','tab_journal','tab_quiaquoi','tab_admin'];
   // Only update text tabs (not the one with bdot span)
-  const qsel = (sel, child) => { const el = document.querySelector(sel); if(!el) return; if(child) { if(el.childNodes[0]) el.childNodes[0].textContent = child; } else el.textContent; };
-  const setTab = (sel, key, useChild) => {
-    const el = document.querySelector(sel);
-    if(!el) return;
-    if(useChild){ if(el.childNodes[0]) el.childNodes[0].textContent = t(key)+' '; }
-    else el.textContent = t(key);
-  };
-  setTab('[onclick*="mouvement"]', 'tab_mouvement', true);
-  setTab('[onclick*="inventaire"]', 'tab_inventaire', false);
-  setTab('[onclick*="signaler"]', 'tab_signaler', true);
-  setTab('[onclick*="journal"]', 'tab_journal', false);
-  setTab('[onclick*="quiaquoi"]', 'tab_quiaquoi', false);
-  setTab('[onclick*="checkAdminPin"]', 'tab_admin', false);
+  setSafeText('top-tab-mouvement', t('tab_mouvement'));
+  setSafeText('top-tab-inventaire', t('tab_inventaire'));
+  setSafeText('lbl-tab-signaler', t('tab_signaler'));
+  setSafeText('top-tab-journal', t('tab_journal'));
+  setSafeText('top-tab-quiaquoi', t('tab_quiaquoi'));
+  setSafeText('tab-btn-admin', t('tab_admin'));
 
   // Mouvement form
   setSafeText('lbl-who-type', t('who_type'));
@@ -1688,7 +1683,6 @@ function applyLang(){
   setSafeText('btn-add-cart', t('add_to_list'));
   setSafeText('btn-submit-all', t('submit_all'));
   setSafeText('btn-clear-cart', t('clear'));
-  setSafeText('lbl-damaged', t('damaged_checkbox'));
   setSafeText('lbl-retour-sev', t('sev_label'));
   setSafeText('lbl-retour-desc', t('desc_label'));
   setSafeAttr('retour-damage-desc', 'placeholder', t('dmg_ph'));
@@ -1707,13 +1701,11 @@ function applyLang(){
 
   // Signaler tab
   setSafeText('lbl-sig-item', t('article_concerned'));
-  setSafeText('lbl-sig-name', t('your_name'));
   setSafeText('lbl-sig-sev', t('severity'));
   setSafeText('lbl-sig-desc', t('description'));
   setSafeText('lbl-sig-photos', t('photos_label'));
   setSafeText('lbl-sig-status', t('new_status'));
   setSafeText('btn-send-report', t('send_report'));
-  setSafeText('lbl-open-reports', t('open_reports'));
   setSafeAttr('sig-desc','placeholder',t('dmg_ph'));
 
   // Severity pills
