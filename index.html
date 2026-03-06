@@ -199,6 +199,25 @@
 
   /* BOTTOM NAV (mobile) */
   .bottom-nav{display:none;}
+
+  @media(max-width:700px){
+    .inv-table-wrap { display:none; }
+    .inv-cards { display:flex; flex-direction:column; gap:10px; }
+  }
+  @media(min-width:701px){
+    .inv-cards { display:none; }
+  }
+  .inv-card {
+    background:var(--white);border:1px solid var(--border);border-radius:10px;
+    padding:12px 14px;box-shadow:var(--shadow);cursor:pointer;
+  }
+  .inv-card:active { background:var(--ice); }
+  .inv-card-header { display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px; }
+  .inv-card-name { font-weight:600;font-size:.92rem;color:var(--navy);flex:1; }
+  .inv-card-id { font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted); }
+  .inv-card-row { display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px; }
+  .inv-card-breakdown { margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:none; }
+  .inv-card-breakdown.open { display:block; }
   @media(max-width:700px){
     .tab-bar{display:none;}
     header .logo span{display:none;}
@@ -472,12 +491,13 @@ alter publication supabase_realtime add table log_entries;</div>
       </select>
     </div>
     <div class="inv-wrap">
-      <table><thead><tr>
+      <div class="inv-table-wrap"><table><thead><tr>
         <th>ID</th><th>Article</th>
         <th style="text-align:center">Qté totale</th>
         <th style="text-align:center">Disponible</th>
         <th>Statut</th>
-      </tr></thead><tbody id="inv-tbody"></tbody></table>
+      </tr></thead><tbody id="inv-tbody"></tbody></table></div>
+    <div class="inv-cards" id="inv-cards"></div>
     </div>
   </div>
 
@@ -574,10 +594,38 @@ alter publication supabase_realtime add table log_entries;</div>
       <div id="al-admin" class="alert" style="margin-bottom:16px;"></div>
       <div style="background:var(--ice);border:1px solid var(--sky);border-radius:10px;padding:16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
         <div>
-          <div id="lbl-init-title" style="font-weight:600;font-size:.9rem;color:var(--navy);">🗂 Initialiser l'inventaire</div>
+          <div id="lbl-init-title" style="font-weight:600;font-size:.9rem;color:var(--navy);">Initialiser l'inventaire</div>
           <div id="lbl-init-desc" style="font-size:.82rem;color:var(--muted);margin-top:3px;">Si votre inventaire est vide, cliquez ici pour charger tous les articles par défaut.</div>
         </div>
         <button class="btn btn-primary" id="btn-load-inv" onclick="seedInventory()" style="white-space:nowrap;">Charger l'inventaire</button>
+      </div>
+
+
+      <!-- Reset inventory quantities -->
+      <div style="background:var(--ice);border:1px solid var(--amber);border-radius:10px;padding:16px;margin-bottom:20px;">
+        <div style="font-weight:600;font-size:.9rem;color:var(--navy);margin-bottom:4px;">🔄 Réinitialiser les quantités</div>
+        <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px;">Choisissez comment réinitialiser les quantités disponibles.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px;">
+            <div style="font-weight:600;font-size:.85rem;color:var(--navy);margin-bottom:4px;">Mettre tout à 0</div>
+            <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px;">Toutes les quantités disponibles passent à 0 (tout est marqué comme sorti).</div>
+            <button class="btn" onclick="resetToZero()" style="background:var(--red);color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.82rem;width:100%;">Mettre à 0</button>
+          </div>
+          <div style="flex:1;min-width:200px;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px;">
+            <div style="font-weight:600;font-size:.85rem;color:var(--navy);margin-bottom:4px;">Restaurer les valeurs originales</div>
+            <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px;">Remet les quantités disponibles à leur valeur totale (comme si tout était en stock).</div>
+            <button class="btn" onclick="resetQuantities()" style="background:var(--amber);color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.82rem;width:100%;">Restaurer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clear movement log -->
+      <div style="background:#fff5f5;border:1px solid #fbb;border-radius:10px;padding:16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:600;font-size:.9rem;color:var(--red);">🗑 Effacer l'historique</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-top:3px;">Supprime tous les mouvements du journal. Cette action est irréversible.</div>
+        </div>
+        <button class="btn" onclick="clearLog()" style="white-space:nowrap;background:var(--red);color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;">Effacer</button>
       </div>
 
       <!-- Add new item form -->
@@ -1226,7 +1274,63 @@ function renderTable(){
     (function(itemId){ btr.innerHTML = '<td colspan="5"><div class="breakdown-panel" id="bd-' + itemId + '"></div></td>'; })(it.id);
     tb.appendChild(btr);
   });
+  renderMobileCards(f);
 }
+
+function renderMobileCards(f){
+  const el = document.getElementById('inv-cards');
+  if(!el) return;
+  if(!f || !f.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Aucun article trouvé.</div>'; return; }
+  el.innerHTML = f.map(it => {
+    const hasDmg = damages.some(d=>d.item_id===it.id&&!d.resolved);
+    let badgeColor = hasDmg?'var(--orange)':it.avail===0?'var(--red)':it.avail<=2?'var(--amber)':'var(--green)';
+    let badgeText = hasDmg?'⚠ Signalé':it.avail===0?'Épuisé':it.avail<=2?'⚠ Stock faible':'En stock';
+    if(it.status==='À commander'){ badgeColor='var(--amber)'; badgeText='À commander'; }
+    if(it.status==='En réparation'){ badgeColor='var(--red)'; badgeText='En réparation'; }
+    if(it.status==='Perdu / Manquant'){ badgeColor='var(--red)'; badgeText='Perdu'; }
+    const availColor = it.avail===0?'var(--red)':it.avail<=2?'var(--amber)':'var(--navy)';
+    return [
+      '<div class="inv-card" data-iid="' + it.id + '" onclick="toggleMobileBreakdown(this.dataset.iid,this)">',
+      '<div class="inv-card-header">',
+      '<span class="inv-card-name">' + it.name + '</span>',
+      '<span class="inv-card-id">' + it.id + '</span>',
+      '</div>',
+      '<div class="inv-card-row">',
+      '<span style="font-size:.82rem;color:var(--muted);">Total: <strong>' + (it.qty!==null?it.qty:'—') + '</strong> &nbsp;|&nbsp; Dispo: <strong style="color:' + availColor + '">' + (it.avail!==null?it.avail:'—') + '</strong></span>',
+      '<span style="font-size:.78rem;font-weight:600;color:' + badgeColor + ';">' + badgeText + '</span>',
+      '</div>',
+      '<div class="inv-card-breakdown" id="mbd-' + it.id + '"></div>',
+      '</div>'
+    ].join('');
+  }).join('');
+}
+
+function toggleMobileBreakdown(itemId, card){
+  const panel = card.querySelector('.inv-card-breakdown');
+  if(!panel) return;
+  const isOpen = panel.classList.contains('open');
+  document.querySelectorAll('.inv-card-breakdown.open').forEach(p=>p.classList.remove('open'));
+  if(isOpen) return;
+  const it = items.find(i=>i.id===itemId);
+  if(!it) return;
+  const byPerson = {};
+  [...log].reverse().forEach(e=>{
+    if(e.type==='broken'||e.item_id!==itemId) return;
+    if(!byPerson[e.person]) byPerson[e.person]=0;
+    const qty=parseInt(e.qty)||0;
+    if(e.type==='sortie') byPerson[e.person]+=qty;
+    if(e.type==='retour') byPerson[e.person]=Math.max(0,byPerson[e.person]-qty);
+  });
+  const peopleOut=Object.entries(byPerson).filter(([,q])=>q>0);
+  const inStorage=it.avail!==null?it.avail:null;
+  let chips='';
+  if(inStorage!==null&&inStorage>0) chips+='<div class="breakdown-chip"><span class="bc-name">📦 '+(it.loc||'Petite salle')+'</span><span class="bc-qty">× '+inStorage+'</span></div>';
+  peopleOut.forEach(([person,qty])=>{ chips+='<div class="breakdown-chip"><span class="bc-name">👤 '+person+'</span><span class="bc-qty">× '+qty+'</span></div>'; });
+  if(!chips) chips='<div style="color:var(--muted);font-size:.82rem;">Aucune donnée.</div>';
+  panel.innerHTML='<div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:6px;">Répartition — Total: '+(it.qty||'—')+'</div><div class="breakdown-grid">'+chips+'</div>';
+  panel.classList.add('open');
+}
+
 async function chAvail(id,d){
   const it=items.find(i=>i.id===id);if(!it)return;
   let a=it.avail===null?0:it.avail;
@@ -1602,7 +1706,7 @@ const T = {
     low_stock_warning: '⚠ Stock faible',
     out_of_stock: 'Épuisé',
     items_person: 'article(s)', load_inventory: "Charger l'inventaire",
-    init_title: "\U0001f5c2\ufe0f Initialiser l'inventaire",
+    init_title: 'Initialiser l\'inventaire',
     init_desc: 'Si votre inventaire est vide, cliquez ici pour charger tous les articles par défaut.',
     sortie_recorded: 'Sortie enregistrée', retour_recorded: 'Retour enregistré',
     damage_email_opened: 'Email de signalement ouvert.',
@@ -1961,6 +2065,43 @@ document.addEventListener('click', function(e){
     chTotal(e.target.dataset.id, +1);
   }
 });
+
+// ═══════════════════════════════════════════════════════
+// RESET & CLEAR LOG
+// ═══════════════════════════════════════════════════════
+async function resetToZero(){
+  const al = document.getElementById('al-admin');
+  if(!confirm('Mettre toutes les quantités disponibles à 0 ? Cette action est irréversible.')) return;
+  try{
+    const updates = items.map(it => sbUpdate('items', it.id, {avail: 0, updated_at: new Date().toISOString()}));
+    await Promise.all(updates);
+    await loadAll(); renderStats(); fillSels(); renderAdminItems();
+    shAl(al, 'success', '✓ Toutes les quantités ont été mises à 0.');
+  }catch(e){ shAl(al, 'error', 'Erreur : ' + e.message); }
+}
+
+async function resetQuantities(){
+  const al = document.getElementById('al-admin');
+  if(!confirm('Remettre toutes les quantités disponibles à leur valeur totale ? Cette action est irréversible.')) return;
+  try{
+    const updates = items.map(it => sbUpdate('items', it.id, {avail: it.qty, updated_at: new Date().toISOString()}));
+    await Promise.all(updates);
+    await loadAll(); renderStats(); fillSels(); renderAdminItems();
+    shAl(al, 'success', '✓ Quantités réinitialisées.');
+  }catch(e){ shAl(al, 'error', 'Erreur : ' + e.message); }
+}
+
+async function clearLog(){
+  const al = document.getElementById('al-admin');
+  if(!confirm("Effacer tout l'historique des mouvements ? Cette action est irréversible.")) return;
+  try{
+    const r = await fetch(SUPA_URL + '/rest/v1/log_entries?id=gte.0', {method:'DELETE', headers:hdr()});
+    if(!r.ok) throw new Error(await r.text());
+    await loadAll(); renderStats();
+    shAl(al, 'success', '✓ Historique effacé.');
+  }catch(e){ shAl(al, 'error', 'Erreur : ' + e.message); }
+}
+
 // ═══════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════
@@ -2014,4 +2155,3 @@ initApp();
 </div>
 </body>
 </html>
-      
