@@ -181,6 +181,15 @@
   .pin-btn:active{transform:scale(.95);}
   .pin-gate-shake{animation:shake .3s ease;}
   @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+  .breakdown-row td { padding: 0 !important; }
+  .breakdown-panel { display:none; padding:10px 16px 14px 40px; background:var(--ice); border-top:1px solid var(--border); }
+  .breakdown-panel.open { display:block; }
+  .breakdown-grid { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .breakdown-chip { display:flex; align-items:center; gap:8px; padding:6px 12px; background:var(--white); border:1px solid var(--border); border-radius:20px; font-size:.82rem; }
+  .breakdown-chip .bc-name { color:var(--navy); font-weight:500; }
+  .breakdown-chip .bc-qty { font-family:'DM Mono',monospace; font-weight:600; color:var(--mid); }
+  tbody tr.inv-row { cursor:pointer; }
   /* CART */
   .cart-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border);flex-wrap:wrap;}
   .cart-item .ci-name{flex:1;font-weight:500;font-size:.92rem;min-width:140px;}
@@ -869,14 +878,13 @@ function showTab(id,btn){
 function renderStats(){
   const broken=damages.filter(d=>!d.resolved).length;
   const out=items.filter(i=>i.avail!==null&&i.qty!==null&&i.avail<i.qty).length;
-  const lowStock=items.filter(i=>i.avail!==null&&i.avail<=2&&i.avail>0).length;
+  const sortis=items.filter(i=>i.avail!==null&&i.qty!==null&&i.avail<i.qty).length;
   document.getElementById('stats-row').innerHTML=`
     <div class="stat-card sc-a"><div class="num">${items.length}</div><div class="lbl">${t('stats_items')}</div></div>
     <div class="stat-card"><div class="num">${items.filter(i=>i.avail===null||i.avail>0).length}</div><div class="lbl">${t('stats_instock')}</div></div>
-    <div class="stat-card sc-w"><div class="num">${out}</div><div class="lbl">${t('stats_partial')}</div></div>
-    <div class="stat-card sc-o"><div class="num">${broken}</div><div class="lbl">${t('stats_reports')}</div></div>
-    <div class="stat-card sc-d"><div class="num">${items.filter(i=>i.status==='À commander').length}</div><div class="lbl">${t('stats_order')}</div></div>
-    ${lowStock>0?`<div class="stat-card" style="border-color:var(--amber);"><div class="num" style="color:var(--amber);">${lowStock}</div><div class="lbl">${t('stats_lowstock')}</div></div>`:''}`;
+    <div class="stat-card sc-w"><div class="num">${sortis}</div><div class="lbl">${t('stats_sortis')}</div></div>
+    <div class="stat-card sc-o"><div class="num">${broken}</div><div class="lbl">${t('stats_bris')}</div></div>
+    <div class="stat-card sc-d"><div class="num">${items.filter(i=>i.status==='À commander').length}</div><div class="lbl">${t('stats_order')}</div></div>`;
   document.getElementById('bdot').classList.toggle('show',broken>0);
   const bdot2=document.getElementById('bdot2'); if(bdot2) bdot2.classList.toggle('show',broken>0);
 }
@@ -1188,15 +1196,23 @@ function renderTable(){
     } else {
       badge = `<span class="badge bg">${t('in_stock')}</span>`;
     }
-    tr.innerHTML=`<td class="id">${it.id}</td><td><strong style="font-weight:500">${it.name}</strong> <button onclick="quickRename('${it.id}')" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:2px 5px;border-radius:4px;margin-left:4px;" title="Rename" onmouseover="this.style.color='var(--mid)'" onmouseout="this.style.color='var(--muted)'">✏️</button></td>
+    tr.className = 'inv-row';
+    tr.innerHTML=`<td class="id">${it.id}</td><td><strong style="font-weight:500">${it.name}</strong> <button onclick="event.stopPropagation();quickRename('${it.id}')" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:2px 5px;border-radius:4px;margin-left:4px;" title="Rename" onmouseover="this.style.color='var(--mid)'" onmouseout="this.style.color='var(--muted)'">✏️</button></td>
       <td style="color:var(--muted);font-size:.85rem">${it.loc||'—'}</td>
       <td class="qty">${it.qty!==null?it.qty:'—'}</td>
       <td class="qty ${qc}"><div class="qty-edit">
-        <button class="qty-btn" onclick="chAvail('${it.id}',-1)">−</button>
+        <button class="qty-btn" onclick="event.stopPropagation();chAvail('${it.id}',-1)">−</button>
         <span class="qty-num">${it.avail!==null?it.avail:'—'}</span>
-        <button class="qty-btn" onclick="chAvail('${it.id}',+1)">+</button>
-      </div></td><td>${badge}</td>`;
+        <button class="qty-btn" onclick="event.stopPropagation();chAvail('${it.id}',+1)">+</button>
+      </div></td><td>${badge} <span style="font-size:.7rem;color:var(--muted);margin-left:4px;">▾</span></td>`;
+    tr.onclick = () => toggleBreakdown('${it.id}', tr);
     tb.appendChild(tr);
+
+    // Breakdown row
+    const btr = document.createElement('tr');
+    btr.className = 'breakdown-row';
+    btr.innerHTML = '<td colspan="6"><div class="breakdown-panel" id="bd-' + it.id + '"></div></td>';
+    tb.appendChild(btr);
   });
 }
 async function chAvail(id,d){
@@ -1853,6 +1869,57 @@ function closePersonLog(){
 document.getElementById('person-log-modal')?.addEventListener('click', function(e){
   if(e.target === this) closePersonLog();
 });
+
+
+// ═══════════════════════════════════════════════════════
+// ITEM BREAKDOWN
+// ═══════════════════════════════════════════════════════
+function toggleBreakdown(itemId, tr){
+  const panel = document.getElementById('bd-' + itemId);
+  if(!panel) return;
+  const isOpen = panel.classList.contains('open');
+
+  // Close all panels first
+  document.querySelectorAll('.breakdown-panel.open').forEach(p => p.classList.remove('open'));
+
+  if(isOpen) return;
+
+  // Build breakdown: storage location + people who have it out
+  const it = items.find(i => i.id === itemId);
+  if(!it) return;
+
+  // Calculate how many are with people (from log)
+  const byPerson = {};
+  [...log].reverse().forEach(e => {
+    if(e.type === 'broken' || e.item_id !== itemId) return;
+    if(!byPerson[e.person]) byPerson[e.person] = 0;
+    const qty = parseInt(e.qty) || 0;
+    if(e.type === 'sortie') byPerson[e.person] += qty;
+    if(e.type === 'retour') byPerson[e.person] = Math.max(0, byPerson[e.person] - qty);
+  });
+
+  const peopleOut = Object.entries(byPerson).filter(([,q]) => q > 0);
+  const totalOut = peopleOut.reduce((s,[,q]) => s+q, 0);
+  const inStorage = (it.avail !== null) ? it.avail : (it.qty !== null ? it.qty - totalOut : null);
+
+  let chips = '';
+  if(inStorage !== null && inStorage > 0){
+    chips += `<div class="breakdown-chip"><span class="bc-name">📦 ${it.loc || 'Petite salle'}</span><span class="bc-qty">× ${inStorage}</span></div>`;
+  }
+  peopleOut.forEach(([person, qty]) => {
+    chips += `<div class="breakdown-chip"><span class="bc-name">👤 ${person}</span><span class="bc-qty">× ${qty}</span></div>`;
+  });
+
+  if(!chips){
+    chips = '<div style="color:var(--muted);font-size:.85rem;">Aucune donnée disponible.</div>';
+  }
+
+  const total = it.qty !== null ? it.qty : '—';
+  panel.innerHTML = `
+    <div style="font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Répartition — Total : ${total}</div>
+    <div class="breakdown-grid">${chips}</div>`;
+  panel.classList.add('open');
+}
 
 // ═══════════════════════════════════════════════════════
 // BOOT
