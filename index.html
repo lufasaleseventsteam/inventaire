@@ -1208,7 +1208,16 @@ function renderTable(){
         <span class="qty-num">${it.avail!==null?it.avail:'—'}</span>
         <button class="qty-btn qty-plus" data-id="${it.id}">+</button>
       </div></td><td>${badge} <span style="font-size:.7rem;color:var(--muted);margin-left:4px;">▾</span></td>`;
-    (function(itemId, row){ row.onclick = () => toggleBreakdown(itemId, row); })(it.id, tr);
+    (function(itemId, row){
+    row.onclick = (e) => {
+      if(e.target.classList.contains('qty-total-minus')){ chTotal(itemId,-1); return; }
+      if(e.target.classList.contains('qty-total-plus')){ chTotal(itemId,+1); return; }
+      if(e.target.classList.contains('qty-minus')){ chAvail(itemId,-1); return; }
+      if(e.target.classList.contains('qty-plus')){ chAvail(itemId,+1); return; }
+      if(e.target.classList.contains('qty-btn')) return;
+      toggleBreakdown(itemId, row);
+    };
+  })(it.id, tr);
     tb.appendChild(tr);
 
     // Breakdown row
@@ -2005,4 +2014,3 @@ initApp();
 </div>
 </body>
 </html>
-       
