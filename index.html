@@ -1197,7 +1197,7 @@ function renderTable(){
       badge = `<span class="badge bg">${t('in_stock')}</span>`;
     }
     tr.className = 'inv-row';
-    tr.innerHTML=`<td class="id">${it.id}</td><td><strong style="font-weight:500">${it.name}</strong> <button onclick="event.stopPropagation();quickRename('${it.id}')" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:2px 5px;border-radius:4px;margin-left:4px;" title="Rename" onmouseover="this.style.color='var(--mid)'" onmouseout="this.style.color='var(--muted)'">✏️</button></td>
+    tr.innerHTML=`<td class="id">${it.id}</td><td><strong style="font-weight:500">${it.name}</strong> <button onclick=\"event.stopPropagation();quickRename(this.dataset.iid)\" data-iid=\"" + it.id + "\" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:2px 5px;border-radius:4px;margin-left:4px;" title="Rename" onmouseover="this.style.color='var(--mid)'" onmouseout="this.style.color='var(--muted)'">✏️</button></td>
       <td style="color:var(--muted);font-size:.85rem">${it.loc||'—'}</td>
       <td class="qty">${it.qty!==null?it.qty:'—'}</td>
       <td class="qty ${qc}"><div class="qty-edit">
@@ -1205,13 +1205,13 @@ function renderTable(){
         <span class="qty-num">${it.avail!==null?it.avail:'—'}</span>
         <button class="qty-btn" onclick="event.stopPropagation();chAvail('${it.id}',+1)">+</button>
       </div></td><td>${badge} <span style="font-size:.7rem;color:var(--muted);margin-left:4px;">▾</span></td>`;
-    tr.onclick = () => toggleBreakdown('${it.id}', tr);
+    (function(itemId, row){ row.onclick = () => toggleBreakdown(itemId, row); })(it.id, tr);
     tb.appendChild(tr);
 
     // Breakdown row
     const btr = document.createElement('tr');
     btr.className = 'breakdown-row';
-    btr.innerHTML = '<td colspan="6"><div class="breakdown-panel" id="bd-' + it.id + '"></div></td>';
+    (function(itemId){ btr.innerHTML = '<td colspan="6"><div class="breakdown-panel" id="bd-' + itemId + '"></div></td>'; })(it.id);
     tb.appendChild(btr);
   });
 }
