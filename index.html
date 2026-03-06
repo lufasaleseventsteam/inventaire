@@ -940,12 +940,17 @@ function renderStats(){
 // ═══════════════════════════════════════════════════════
 // SELECTS
 // ═══════════════════════════════════════════════════════
+function getHiddenItems(){ return JSON.parse(localStorage.getItem('hidden_mv_items')||'[]'); }
+function setHiddenItems(arr){ localStorage.setItem('hidden_mv_items', JSON.stringify(arr)); }
+
 function fillSels(){
+  const hidden = getHiddenItems();
   ['mv-item','sig-item'].forEach(sid=>{
     const s=document.getElementById(sid),cur=s.value;
     s.innerHTML='<option value="">— Choisir —</option>';
     let ls='';
-    items.forEach(it=>{
+    const visibleItems = sid==='mv-item' ? items.filter(it=>!hidden.includes(it.id)) : items;
+    visibleItems.forEach(it=>{
       const sec=it.id.split('-')[0],sl=SECS[sec]||sec;
       if(sl!==ls){s.appendChild(Object.assign(document.createElement('optgroup'),{label:sl}));ls=sl;}
       const o=document.createElement('option');
@@ -1468,21 +1473,64 @@ async function addItem(){
 // ═══════════════════════════════════════════════════════
 // ADMIN — ITEMS
 // ═══════════════════════════════════════════════════════
+function toggleMvVisibility(id, show){
+  const hidden = getHiddenItems();
+  if(show){ const idx=hidden.indexOf(id); if(idx>-1) hidden.splice(idx,1); }
+  else { if(!hidden.includes(id)) hidden.push(id); }
+  setHiddenItems(hidden);
+  fillSels();
+}
+
 function renderAdminItems(){
   const el = document.getElementById('admin-items-list');
   if(!el) return;
   const q = (document.getElementById('admin-item-search')?.value || '').toLowerCase();
   const filtered = items.filter(i => !q || i.name.toLowerCase().includes(q) || i.id.toLowerCase().includes(q));
   if(!filtered.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted)">No items found.</div>'; return; }
-  el.innerHTML = filtered.map(it => `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border);flex-wrap:wrap;">
-      <span style="font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted);width:70px;flex-shrink:0;">${it.id}</span>
-      <span style="flex:1;font-size:.9rem;font-weight:500;min-width:140px;">${it.name}</span>
-      <span style="font-size:.8rem;color:var(--muted);">${it.loc||'—'}</span>
-      <span style="font-family:'DM Mono',monospace;font-size:.82rem;color:var(--mid);">qty: ${it.qty!==null?it.qty:'—'}</span>
-      <button onclick="openEdit('${it.id}')" style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--border);background:transparent;font-size:.8rem;cursor:pointer;color:var(--blue);transition:all .15s;" onmouseover="this.style.borderColor='var(--mid)'" onmouseout="this.style.borderColor='var(--border)'">✏️ Edit</button>
-      <button onclick="deleteItem('${it.id}')" style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--border);background:transparent;font-size:.8rem;cursor:pointer;color:var(--red);transition:all .15s;" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--border)'">🗑 Delete</button>
-    </div>`).join('');
+  const hidden = getHiddenItems();
+  el.innerHTML = '';
+  filtered.forEach(it => {
+    const isHidden = hidden.includes(it.id);
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border);flex-wrap:wrap;';
+
+    const idSpan = document.createElement('span');
+    idSpan.className = 'id';
+    idSpan.style.cssText = 'width:70px;flex-shrink:0;font-size:.75rem;color:var(--muted);';
+    idSpan.textContent = it.id;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'flex:1;font-size:.9rem;font-weight:500;min-width:120px;';
+    nameSpan.textContent = it.name;
+
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:.78rem;color:var(--muted);cursor:pointer;white-space:nowrap;';
+    label.title = 'Afficher dans Mouvement';
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.checked = !isHidden;
+    chk.style.cursor = 'pointer';
+    chk.addEventListener('change', (function(id){ return function(){ toggleMvVisibility(id, this.checked); }; })(it.id));
+    label.appendChild(chk);
+    label.appendChild(document.createTextNode(' Mouvement'));
+
+    const editBtn = document.createElement('button');
+    editBtn.style.cssText = 'padding:5px 12px;border-radius:7px;border:1.5px solid var(--border);background:transparent;font-size:.8rem;cursor:pointer;color:var(--blue);';
+    editBtn.textContent = '✏️ Edit';
+    editBtn.addEventListener('click', (function(id){ return function(){ openEdit(id); }; })(it.id));
+
+    const delBtn = document.createElement('button');
+    delBtn.style.cssText = 'padding:5px 12px;border-radius:7px;border:1.5px solid var(--border);background:transparent;font-size:.8rem;cursor:pointer;color:var(--red);';
+    delBtn.textContent = '🗑';
+    delBtn.addEventListener('click', (function(id){ return function(){ deleteItem(id); }; })(it.id));
+
+    div.appendChild(idSpan);
+    div.appendChild(nameSpan);
+    div.appendChild(label);
+    div.appendChild(editBtn);
+    div.appendChild(delBtn);
+    el.appendChild(div);
+  });
 }
 
 function openEdit(id){
