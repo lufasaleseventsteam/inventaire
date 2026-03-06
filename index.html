@@ -671,10 +671,7 @@ alter publication supabase_realtime add table log_entries;</div>
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
         <div style="font-weight:600;font-size:.88rem;color:var(--navy);margin-bottom:12px;">➕ Add a new item</div>
         <div class="form-grid">
-          <div class="form-group">
-            <label id="lbl-admin-id">ID article (ex. DIV-07)</label>
-            <input type="text" id="admin-item-id" placeholder="CAT-01">
-          </div>
+<input type="hidden" id="admin-item-id">
           <div class="form-group">
             <label id="lbl-admin-name">Nom de l'article</label>
             <input type="text" id="admin-item-name" placeholder="e.g. Extension cord">
@@ -700,8 +697,37 @@ alter publication supabase_realtime add table log_entries;</div>
         </div>
       </div>
 
-      <!-- Search items -->
-      <input type="text" id="admin-item-search" placeholder="🔍 Rechercher des articles…" oninput="renderAdminItems()" style="margin-bottom:12px;">
+      <!-- Search + filter bar -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+        <input type="text" id="admin-item-search" placeholder="🔍 Rechercher…" oninput="renderAdminItems()" style="flex:1;min-width:140px;">
+        <select id="admin-cat-filter" onchange="renderAdminItems()" style="flex:1;min-width:140px;padding:9px 10px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;background:var(--white);">
+          <option value="">Toutes les catégories</option>
+        </select>
+        <button id="bulk-toggle-btn" onclick="toggleBulkMode()" style="padding:9px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--white);font-size:.82rem;cursor:pointer;font-family:inherit;white-space:nowrap;color:var(--navy);">☑ Sélection multiple</button>
+      </div>
+
+      <!-- Bulk action bar (hidden until bulk mode) -->
+      <div id="bulk-bar" style="display:none;background:var(--sky);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;flex-wrap:wrap;gap:10px;align-items:center;">
+        <span id="bulk-count" style="font-size:.85rem;font-weight:600;color:var(--navy);flex:1;">0 article(s) sélectionné(s)</span>
+        <select id="bulk-status" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.82rem;background:var(--white);">
+          <option value="">— Changer le statut —</option>
+          <option value="En stock">En stock</option>
+          <option value="En réparation">En réparation</option>
+          <option value="Perdu / Manquant">Perdu / Manquant</option>
+          <option value="À commander">À commander</option>
+          <option value="">Aucun statut</option>
+        </select>
+        <select id="bulk-loc" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.82rem;background:var(--white);">
+          <option value="__none__">— Changer l'emplacement —</option>
+          <option value="Petite salle">Petite salle</option>
+          <option value="Grande salle">Grande salle</option>
+          <option value="Armoire">Armoire</option>
+          <option value="Petite salle / Grande salle">Petite salle / Grande salle</option>
+        </select>
+        <button onclick="applyBulk()" style="padding:7px 14px;border-radius:8px;border:none;background:var(--navy);color:#fff;font-size:.82rem;cursor:pointer;font-family:inherit;font-weight:600;">Appliquer</button>
+        <button onclick="toggleBulkMode()" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--border);background:transparent;font-size:.82rem;cursor:pointer;font-family:inherit;">Annuler</button>
+      </div>
+
       <div id="admin-items-list" style="display:flex;flex-direction:column;gap:8px;max-height:480px;overflow-y:auto;"></div>
     </div>
 
@@ -1168,6 +1194,8 @@ function renderCart(){
     </div>`).join('');
 }
 
+let _pendingSubmit = false;
+
 async function submitMv(){
   const type  = document.getElementById('mv-type').value;
   const name  = document.getElementById('mv-name').value;
@@ -1175,6 +1203,13 @@ async function submitMv(){
   const al    = document.getElementById('al-mv');
   if(!name)       return shAl(al,'error','Please select your name.');
   if(!cart.length) return shAl(al,'error','Add at least one item to the list.');
+
+  // For returns, ask defect question first
+  if(type === 'retour' && !_pendingSubmit){
+    document.getElementById('defect-modal').style.display = 'flex';
+    return;
+  }
+  _pendingSubmit = false;
 
   const btn = document.getElementById('mv-submit');
   btn.innerHTML='<span class="spinner"></span> Submitting…';btn.disabled=true;
@@ -1215,6 +1250,20 @@ async function submitMv(){
     resetMv();
   }catch(e){ shAl(al,'error','Network error: '+e.message); }
   btn.innerHTML='✓ Submit all'; btn.disabled=false;
+}
+
+function defectAnswer(hasDefect){
+  document.getElementById('defect-modal').style.display = 'none';
+  if(hasDefect){
+    // Switch to Signaler tab so they can file a report
+    showTab('signaler', document.querySelector('[onclick*="signaler"]'));
+    const al = document.getElementById('al-mv');
+    shAl(al, 'info', 'Veuillez remplir un signalement, puis revenez pour compléter votre retour.');
+  } else {
+    // Proceed with submit
+    _pendingSubmit = true;
+    submitMv();
+  }
 }
 
 function resetMv(){
@@ -1569,8 +1618,12 @@ function removeName(i){
 // ADD ITEM (ADMIN)
 // ═══════════════════════════════════════════════════════
 async function addItem(){
-  const id   = document.getElementById('admin-item-id').value.trim().toUpperCase();
   const name = document.getElementById('admin-item-name').value.trim();
+  // Auto-generate ID from first 3 letters of name + timestamp suffix
+  const prefix = name.replace(/[^a-zA-Z]/g,'').substring(0,3).toUpperCase() || 'ART';
+  const suffix = String(Date.now()).slice(-4);
+  const id = prefix + '-' + suffix;
+  document.getElementById('admin-item-id').value = id;
   const loc  = document.getElementById('admin-item-loc').value.trim();
   const qty  = parseInt(document.getElementById('admin-item-qty').value) || null;
   const al   = document.getElementById('al-admin');
@@ -1600,7 +1653,13 @@ function renderAdminItems(){
   const el = document.getElementById('admin-items-list');
   if(!el) return;
   const q = (document.getElementById('admin-item-search')?.value || '').toLowerCase();
-  const filtered = items.filter(i => !q || i.name.toLowerCase().includes(q) || i.id.toLowerCase().includes(q));
+  const catFilter = (document.getElementById('admin-cat-filter')?.value || '');
+  const filtered = items.filter(i => {
+    const matchQ = !q || i.name.toLowerCase().includes(q) || i.id.toLowerCase().includes(q);
+    const sec = i.id.split('-')[0];
+    const matchCat = !catFilter || (SECS[sec]||sec) === catFilter;
+    return matchQ && matchCat;
+  });
   if(!filtered.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted)">No items found.</div>'; return; }
   const hidden = getHiddenItems();
   el.innerHTML = '';
@@ -2029,7 +2088,6 @@ function applyLang(){
 
   // Admin
   setSafeAttr('admin-new-name','placeholder',t('add_name_ph'));
-  setSafeText('lbl-admin-id', t('item_id'));
   setSafeText('lbl-admin-name', t('item_name'));
   setSafeText('lbl-admin-loc', t('location'));
   setSafeText('lbl-admin-qty', t('total_quantity'));
@@ -2261,6 +2319,72 @@ async function clearLog(){
   }catch(e){ shAl(al, 'error', 'Erreur : ' + e.message); }
 }
 
+
+// ═══════════════════════════════════════════════════════
+// BULK EDIT & CATEGORY FILTER
+// ═══════════════════════════════════════════════════════
+let bulkMode = false;
+let bulkSelected = new Set();
+
+function toggleBulkMode(){
+  bulkMode = !bulkMode;
+  bulkSelected.clear();
+  const bar = document.getElementById('bulk-bar');
+  const btn = document.getElementById('bulk-toggle-btn');
+  if(bar) bar.style.display = bulkMode ? 'flex' : 'none';
+  if(btn) btn.style.background = bulkMode ? 'var(--navy)' : 'var(--white)';
+  if(btn) btn.style.color = bulkMode ? '#fff' : 'var(--navy)';
+  renderAdminItems();
+}
+
+function toggleBulkItem(id, checked){
+  if(checked) bulkSelected.add(id);
+  else bulkSelected.delete(id);
+  const count = document.getElementById('bulk-count');
+  if(count) count.textContent = bulkSelected.size + ' article(s) sélectionné(s)';
+}
+
+async function applyBulk(){
+  if(!bulkSelected.size) return alert('Sélectionnez au moins un article.');
+  const status = document.getElementById('bulk-status').value;
+  const loc = document.getElementById('bulk-loc').value;
+  if(!status && loc === '__none__') return alert('Choisissez un statut ou un emplacement à appliquer.');
+  const al = document.getElementById('al-admin');
+  try{
+    const updates = [...bulkSelected].map(id => {
+      const patch = {updated_at: new Date().toISOString()};
+      if(status !== '') patch.status = status;
+      if(loc !== '__none__') patch.loc = loc;
+      return sbUpdate('items', id, patch);
+    });
+    await Promise.all(updates);
+    await loadAll(); renderStats(); fillSels(); renderAdminItems();
+    shAl(al, 'success', '✓ ' + bulkSelected.size + ' article(s) mis à jour.');
+    bulkSelected.clear();
+    document.getElementById('bulk-status').value = '';
+    document.getElementById('bulk-loc').value = '__none__';
+    const count = document.getElementById('bulk-count');
+    if(count) count.textContent = '0 article(s) sélectionné(s)';
+  }catch(e){ shAl(al, 'error', 'Erreur : ' + e.message); }
+}
+
+function fillCatFilter(){
+  const sel = document.getElementById('admin-cat-filter');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Toutes les catégories</option>';
+  Object.entries(SECS).reduce((seen, [k,v]) => {
+    if(!seen.includes(v)){
+      seen.push(v);
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      sel.appendChild(o);
+    }
+    return seen;
+  }, []);
+  if(cur) sel.value = cur;
+}
+
 // ═══════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════
@@ -2312,6 +2436,18 @@ initApp();
     <div id="plm-list" style="padding:16px 20px;max-height:70vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 </div>
+
+<!-- Defect check modal -->
+<div id="defect-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--white);border-radius:16px;padding:32px 28px;max-width:420px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.25);text-align:center;">
+    <div style="font-size:2rem;margin-bottom:12px;">🔍</div>
+    <div style="font-weight:700;font-size:1.1rem;color:var(--navy);margin-bottom:10px;">Avant de terminer…</div>
+    <div style="font-size:.92rem;color:var(--mid);margin-bottom:28px;line-height:1.5;">Est-ce qu'un article retourné est <strong>défectueux, brisé</strong> ou <strong>doit être remplacé</strong>&nbsp;?</div>
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button onclick="defectAnswer(true)" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--orange);color:#fff;font-size:.95rem;font-weight:600;cursor:pointer;font-family:inherit;">⚠ Oui</button>
+      <button onclick="defectAnswer(false)" style="flex:1;padding:12px;border-radius:10px;border:2px solid var(--border);background:transparent;color:var(--navy);font-size:.95rem;font-weight:600;cursor:pointer;font-family:inherit;">✓ Non, tout va bien</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
-     
