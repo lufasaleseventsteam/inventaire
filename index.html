@@ -1198,11 +1198,15 @@ function renderTable(){
     }
     tr.className = 'inv-row';
     tr.innerHTML=`<td class="id">${it.id}</td><td><strong style="font-weight:500">${it.name}</strong> <button onclick=\"event.stopPropagation();quickRename(this.dataset.iid)\" data-iid=\"" + it.id + "\" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:2px 5px;border-radius:4px;margin-left:4px;" title="Rename" onmouseover="this.style.color='var(--mid)'" onmouseout="this.style.color='var(--muted)'">✏️</button></td>
-      <td class="qty">${it.qty!==null?it.qty:'—'}</td>
+      <td class="qty"><div class="qty-edit">
+        <button class="qty-btn qty-total-minus" data-id="${it.id}">−</button>
+        <span class="qty-num">${it.qty!==null?it.qty:'—'}</span>
+        <button class="qty-btn qty-total-plus" data-id="${it.id}">+</button>
+      </div></td>
       <td class="qty ${qc}"><div class="qty-edit">
-        <button class="qty-btn" onclick="event.stopPropagation();chAvail('${it.id}',-1)">−</button>
+        <button class="qty-btn qty-minus" data-id="${it.id}">−</button>
         <span class="qty-num">${it.avail!==null?it.avail:'—'}</span>
-        <button class="qty-btn" onclick="event.stopPropagation();chAvail('${it.id}',+1)">+</button>
+        <button class="qty-btn qty-plus" data-id="${it.id}">+</button>
       </div></td><td>${badge} <span style="font-size:.7rem;color:var(--muted);margin-left:4px;">▾</span></td>`;
     (function(itemId, row){ row.onclick = () => toggleBreakdown(itemId, row); })(it.id, tr);
     tb.appendChild(tr);
@@ -1219,9 +1223,22 @@ async function chAvail(id,d){
   let a=it.avail===null?0:it.avail;
   a=Math.max(0,a+d);
   if(it.qty!==null)a=Math.min(it.qty,a);
-  it.avail=a; // optimistic update
+  it.avail=a;
   renderTable();
   await sbUpdate('items',id,{avail:a,updated_at:new Date().toISOString()});
+}
+
+async function chTotal(id,d){
+  const it=items.find(i=>i.id===id);if(!it)return;
+  let q=it.qty===null?0:it.qty;
+  q=Math.max(0,q+d);
+  // Also adjust avail proportionally — if total goes up, avail goes up too
+  let a=it.avail===null?0:it.avail;
+  if(d>0) a=Math.min(q,a+d);
+  if(d<0) a=Math.max(0,Math.min(a,q));
+  it.qty=q; it.avail=a;
+  renderTable();
+  await sbUpdate('items',id,{qty:q,avail:a,updated_at:new Date().toISOString()});
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1918,6 +1935,23 @@ function toggleBreakdown(itemId, tr){
   panel.classList.add('open');
 }
 
+
+// Qty button delegation
+document.addEventListener('click', function(e){
+  if(e.target.classList.contains('qty-minus')){
+    e.stopPropagation();
+    chAvail(e.target.dataset.id, -1);
+  } else if(e.target.classList.contains('qty-plus')){
+    e.stopPropagation();
+    chAvail(e.target.dataset.id, +1);
+  } else if(e.target.classList.contains('qty-total-minus')){
+    e.stopPropagation();
+    chTotal(e.target.dataset.id, -1);
+  } else if(e.target.classList.contains('qty-total-plus')){
+    e.stopPropagation();
+    chTotal(e.target.dataset.id, +1);
+  }
+});
 // ═══════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════
@@ -1971,4 +2005,3 @@ initApp();
 </div>
 </body>
 </html>
-    
