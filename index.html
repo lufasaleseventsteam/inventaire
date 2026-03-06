@@ -912,7 +912,7 @@ function updateInfo(){
   const it=items.find(i=>i.id===id);if(!it){el.classList.remove('show');return;}
   const dmg=damages.find(d=>d.item_id===id&&!d.resolved);
   el.className='alert alert-info show';
-  el.innerHTML=`<strong>${it.name}</strong> — ${it.loc||'Emplacement non défini'} &nbsp;|&nbsp; Disponible : <strong>${it.avail!==null?it.avail:'?'}</strong> / ${it.qty!==null?it.qty:'?'}${it.status?` &nbsp;|&nbsp; ${it.status}`:''}${dmg?` &nbsp;|&nbsp; <span style="color:var(--orange)">⚠ Signalement ouvert</span>`:''}`;
+  el.innerHTML=`<strong>${it.name}</strong> &nbsp;|&nbsp; Disponible : <strong>${it.avail!==null?it.avail:'?'}</strong> / ${it.qty!==null?it.qty:'?'}${it.status?` &nbsp;|&nbsp; ${it.status}`:''}${dmg?` &nbsp;|&nbsp; <span style="color:var(--orange)">⚠ Signalement ouvert</span>`:''}`;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1014,12 +1014,12 @@ async function submitMv(){
       else if(type==='retour' && newAvail!==null) newAvail = it.qty!==null ? Math.min(it.qty, newAvail+c.qty) : newAvail+c.qty;
       const ops = [
         sbUpdate('items', c.itemId, {avail:newAvail, updated_at:new Date().toISOString()}),
-        sbInsert('log_entries', {id:now+i, type, item_id:c.itemId, item_name:c.itemName, loc:it.loc, qty:c.qty, person:name, notes, photos:'[]'})
+        sbInsert('log_entries', {id:now+i, type, item_id:c.itemId, item_name:c.itemName, loc:'Petite salle', qty:c.qty, person:name, notes, photos:'[]'})
       ];
       // File damage report if flagged
       if(c.damaged && c.dmgDesc){
-        ops.push(sbInsert('damages',{id:now+i+500,item_id:c.itemId,item_name:c.itemName,loc:it.loc,person:name,severity:c.dmgSev||'low',description:c.dmgDesc,photos:'[]',resolved:false}));
-        ops.push(sbInsert('log_entries',{id:now+i+1000,type:'broken',item_id:c.itemId,item_name:c.itemName,loc:it.loc,qty:null,person:name,notes:c.dmgDesc,severity:c.dmgSev||'low',photos:'[]'}));
+        ops.push(sbInsert('damages',{id:now+i+500,item_id:c.itemId,item_name:c.itemName,loc:'Petite salle',person:name,severity:c.dmgSev||'low',description:c.dmgDesc,photos:'[]',resolved:false}));
+        ops.push(sbInsert('log_entries',{id:now+i+1000,type:'broken',item_id:c.itemId,item_name:c.itemName,loc:'Petite salle',qty:null,person:name,notes:c.dmgDesc,severity:c.dmgSev||'low',photos:'[]'}));
       }
       return Promise.all(ops);
     });
@@ -1099,8 +1099,8 @@ async function submitSig(){
   try{
     const photoJson=JSON.stringify(photos.map(p=>p.d));
     const promises=[
-      sbInsert('damages',{id:Date.now(),item_id:iid,item_name:it.name,loc:it.loc,person:name,severity:sev,description:desc,photos:photoJson,resolved:false}),
-      sbInsert('log_entries',{id:Date.now()+1,type:'broken',item_id:iid,item_name:it.name,loc:it.loc,qty:null,person:name,notes:desc,severity:sev,photos:photoJson})
+      sbInsert('damages',{id:Date.now(),item_id:iid,item_name:it.name,loc:'Petite salle',person:name,severity:sev,description:desc,photos:photoJson,resolved:false}),
+      sbInsert('log_entries',{id:Date.now()+1,type:'broken',item_id:iid,item_name:it.name,loc:'Petite salle',qty:null,person:name,notes:desc,severity:sev,photos:photoJson})
     ];
     if(nst)promises.push(sbUpdate('items',iid,{status:nst,updated_at:new Date().toISOString()}));
     await Promise.all(promises);
