@@ -1662,12 +1662,19 @@ function applyLang(){
   const tabs = document.querySelectorAll('.tab');
   const tabKeys = ['tab_mouvement','tab_inventaire','tab_signaler','tab_journal','tab_quiaquoi','tab_admin'];
   // Only update text tabs (not the one with bdot span)
-  document.querySelector('[onclick*="mouvement"]').childNodes[0].textContent = t('tab_mouvement')+' ';
-  document.querySelector('[onclick*="inventaire"]').textContent = t('tab_inventaire');
-  document.querySelector('[onclick*="signaler"]').childNodes[0].textContent = t('tab_signaler')+' ';
-  document.querySelector('[onclick*="journal"]').textContent = t('tab_journal');
-  document.querySelector('[onclick*="quiaquoi"]').textContent = t('tab_quiaquoi');
-  document.querySelector('[onclick*="admin"]').textContent = t('tab_admin');
+  const qsel = (sel, child) => { const el = document.querySelector(sel); if(!el) return; if(child) { if(el.childNodes[0]) el.childNodes[0].textContent = child; } else el.textContent; };
+  const setTab = (sel, key, useChild) => {
+    const el = document.querySelector(sel);
+    if(!el) return;
+    if(useChild){ if(el.childNodes[0]) el.childNodes[0].textContent = t(key)+' '; }
+    else el.textContent = t(key);
+  };
+  setTab('[onclick*="mouvement"]', 'tab_mouvement', true);
+  setTab('[onclick*="inventaire"]', 'tab_inventaire', false);
+  setTab('[onclick*="signaler"]', 'tab_signaler', true);
+  setTab('[onclick*="journal"]', 'tab_journal', false);
+  setTab('[onclick*="quiaquoi"]', 'tab_quiaquoi', false);
+  setTab('[onclick*="checkAdminPin"]', 'tab_admin', false);
 
   // Mouvement form
   setSafeText('lbl-who-type', t('who_type'));
