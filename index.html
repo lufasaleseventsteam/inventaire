@@ -190,6 +190,32 @@
   .breakdown-chip .bc-name { color:var(--navy); font-weight:500; }
   .breakdown-chip .bc-qty { font-family:'DM Mono',monospace; font-weight:600; color:var(--mid); }
   tbody tr.inv-row { cursor:pointer; }
+
+  .custom-select-wrap { position:relative; }
+  .custom-select-trigger {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;
+    background:var(--white);cursor:pointer;font-size:.92rem;
+    transition:border-color .15s;user-select:none;min-height:44px;
+  }
+  .custom-select-trigger:hover, .custom-select-trigger.open { border-color:var(--mid); }
+  .custom-select-dropdown {
+    display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
+    background:var(--white);border:1.5px solid var(--border);border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;
+  }
+  .custom-select-dropdown.open { display:block; }
+  .cs-group-label {
+    padding:6px 12px 3px;font-size:.72rem;font-weight:700;
+    color:var(--muted);text-transform:uppercase;letter-spacing:.06em;
+  }
+  .cs-option {
+    padding:9px 16px;font-size:.88rem;cursor:pointer;transition:background .1s;
+  }
+  .cs-option:hover { background:var(--ice); }
+  .cs-option.selected { background:var(--sky);color:var(--navy);font-weight:600; }
+  .cs-option.disabled { color:var(--muted);font-style:italic; }
+
   /* CART */
   .cart-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border);flex-wrap:wrap;}
   .cart-item .ci-name{flex:1;font-weight:500;font-size:.92rem;min-width:140px;}
@@ -429,7 +455,20 @@ alter publication supabase_realtime add table log_entries;</div>
       <div class="form-grid">
         <div class="form-group">
           <label id="lbl-article">Article</label>
-          <select id="mv-item" onchange="updateInfo()"><option value="">— Choisir —</option></select>
+          <div class="custom-select-wrap" id="mv-item-wrap">
+            <div class="custom-select-trigger" id="mv-item-trigger" onmousedown="event.preventDefault();toggleItemPicker()">
+              <span id="mv-item-label">— Choisir —</span>
+              <span style="color:var(--muted);font-size:.8rem;">▾</span>
+            </div>
+            <div class="custom-select-dropdown" id="mv-item-dropdown">
+              <div style="padding:8px;">
+                <input type="text" id="mv-item-search" placeholder="Rechercher..." oninput="filterItemPicker()" autocomplete="off"
+                  style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:.88rem;box-sizing:border-box;font-family:inherit;">
+              </div>
+              <div id="mv-item-list" style="max-height:240px;overflow-y:auto;"></div>
+            </div>
+          </div>
+          <input type="hidden" id="mv-item" value="">
         </div>
         <div class="form-group">
           <label id="lbl-qty">Quantité</label>
@@ -945,23 +984,96 @@ function setHiddenItems(arr){ localStorage.setItem('hidden_mv_items', JSON.strin
 
 function fillSels(){
   const hidden = getHiddenItems();
-  ['mv-item','sig-item'].forEach(sid=>{
-    const s=document.getElementById(sid),cur=s.value;
-    s.innerHTML='<option value="">— Choisir —</option>';
-    let ls='';
-    const visibleItems = sid==='mv-item' ? items.filter(it=>!hidden.includes(it.id)) : items;
-    visibleItems.forEach(it=>{
-      const sec=it.id.split('-')[0],sl=SECS[sec]||sec;
-      if(sl!==ls){s.appendChild(Object.assign(document.createElement('optgroup'),{label:sl}));ls=sl;}
-      const o=document.createElement('option');
-      o.value=it.id;
-      o.textContent=it.name+(it.avail!==null?` (dispo: ${it.avail})`:'')+(damages.find(d=>d.item_id===it.id&&!d.resolved)?' ⚠':'');
-      s.lastChild.appendChild(o);
-    });
-    if(cur)s.value=cur;
+  // Fill custom picker for mv-item
+  fillItemPicker(items.filter(it=>!hidden.includes(it.id)));
+  // Fill sig-item native select
+  const s=document.getElementById('sig-item'), cur=s.value;
+  s.innerHTML='<option value="">— Choisir —</option>';
+  let ls='';
+  items.forEach(it=>{
+    const sec=it.id.split('-')[0],sl=SECS[sec]||sec;
+    if(sl!==ls){s.appendChild(Object.assign(document.createElement('optgroup'),{label:sl}));ls=sl;}
+    const o=document.createElement('option');
+    o.value=it.id;
+    o.textContent=it.name+(it.avail!==null?` (dispo: ${it.avail})`:'')+(damages.find(d=>d.item_id===it.id&&!d.resolved)?' ⚠':'');
+    s.lastChild.appendChild(o);
   });
+  if(cur) s.value=cur;
   updateInfo();
 }
+
+let _pickerItems = [];
+
+function fillItemPicker(itemList){
+  _pickerItems = itemList;
+  renderItemPicker('');
+}
+
+function renderItemPicker(query){
+  const list = document.getElementById('mv-item-list');
+  if(!list) return;
+  const q = query.toLowerCase();
+  const filtered = q ? _pickerItems.filter(it=>it.name.toLowerCase().includes(q)) : _pickerItems;
+  const curVal = document.getElementById('mv-item').value;
+  list.innerHTML = '';
+  if(!filtered.length){
+    list.innerHTML = '<div style="padding:12px 16px;color:var(--muted);font-size:.85rem;">Aucun résultat.</div>';
+    return;
+  }
+  let lastSec = '';
+  filtered.forEach(it => {
+    const sec = it.id.split('-')[0], sl = SECS[sec]||sec;
+    if(!q && sl !== lastSec){
+      const g = document.createElement('div');
+      g.className = 'cs-group-label';
+      g.textContent = sl;
+      list.appendChild(g);
+      lastSec = sl;
+    }
+    const opt = document.createElement('div');
+    opt.className = 'cs-option' + (it.id===curVal?' selected':'');
+    const hasDmg = damages.find(d=>d.item_id===it.id&&!d.resolved);
+    opt.textContent = it.name + (it.avail!==null?` (dispo: ${it.avail})`:'') + (hasDmg?' ⚠':'');
+    opt.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); selectItem(it.id, opt.textContent); });
+    list.appendChild(opt);
+  });
+}
+
+function filterItemPicker(){
+  const q = document.getElementById('mv-item-search').value;
+  renderItemPicker(q);
+}
+
+function toggleItemPicker(){
+  const dd = document.getElementById('mv-item-dropdown');
+  const trigger = document.getElementById('mv-item-trigger');
+  const isOpen = dd.classList.contains('open');
+  closeItemPicker();
+  if(!isOpen){
+    dd.classList.add('open');
+    trigger.classList.add('open');
+    setTimeout(()=>{ document.getElementById('mv-item-search').focus(); }, 50);
+  }
+}
+
+function closeItemPicker(){
+  document.getElementById('mv-item-dropdown')?.classList.remove('open');
+  document.getElementById('mv-item-trigger')?.classList.remove('open');
+}
+
+function selectItem(id, label){
+  document.getElementById('mv-item').value = id;
+  document.getElementById('mv-item-label').textContent = label;
+  closeItemPicker();
+  updateInfo();
+}
+
+// Close picker when clicking outside
+document.addEventListener('click', function(e){
+  const wrap = document.getElementById('mv-item-wrap');
+  if(wrap && !wrap.contains(e.target)) closeItemPicker();
+});
+
 
 function updateInfo(){
   const id=document.getElementById('mv-item').value;
@@ -1108,6 +1220,9 @@ async function submitMv(){
 function resetMv(){
   cart=[];
   ['mv-item','mv-name','mv-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mv-item-label').textContent='— Choisir —';
+  document.getElementById('mv-item-search').value='';
+  renderItemPicker('');
   document.getElementById('mv-qty').value='1';
   document.getElementById('item-info').classList.remove('show');
   if(document.getElementById('retour-damaged')) document.getElementById('retour-damaged').checked=false;
@@ -1250,7 +1365,7 @@ function renderTable(){
       badge = `<span class="badge bg">${t('in_stock')}</span>`;
     }
     tr.className = 'inv-row';
-    tr.innerHTML=`<td class="id">${it.id}</td><td><strong style="font-weight:500">${it.name}</strong> <button onclick=\"event.stopPropagation();quickRename(this.dataset.iid)\" data-iid=\"" + it.id + "\" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:2px 5px;border-radius:4px;margin-left:4px;" title="Rename" onmouseover="this.style.color='var(--mid)'" onmouseout="this.style.color='var(--muted)'">✏️</button></td>
+    tr.innerHTML=`<td><strong style="font-weight:500">${it.name}</strong> <button onclick=\"event.stopPropagation();quickRename(this.dataset.iid)\" data-iid=\"" + it.id + "\" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:2px 5px;border-radius:4px;margin-left:4px;" title="Rename" onmouseover="this.style.color='var(--mid)'" onmouseout="this.style.color='var(--muted)'">✏️</button></td>
       <td class="qty"><div class="qty-edit">
         <button class="qty-btn qty-total-minus" data-id="${it.id}">−</button>
         <span class="qty-num">${it.qty!==null?it.qty:'—'}</span>
@@ -1494,10 +1609,7 @@ function renderAdminItems(){
     const div = document.createElement('div');
     div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border);flex-wrap:wrap;';
 
-    const idSpan = document.createElement('span');
-    idSpan.className = 'id';
-    idSpan.style.cssText = 'width:70px;flex-shrink:0;font-size:.75rem;color:var(--muted);';
-    idSpan.textContent = it.id;
+
 
     const nameSpan = document.createElement('span');
     nameSpan.style.cssText = 'flex:1;font-size:.9rem;font-weight:500;min-width:120px;';
@@ -1524,7 +1636,6 @@ function renderAdminItems(){
     delBtn.textContent = '🗑';
     delBtn.addEventListener('click', (function(id){ return function(){ deleteItem(id); }; })(it.id));
 
-    div.appendChild(idSpan);
     div.appendChild(nameSpan);
     div.appendChild(label);
     div.appendChild(editBtn);
