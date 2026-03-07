@@ -433,11 +433,11 @@ alter publication supabase_realtime add table log_entries;</div>
       <div class="form-grid">
         <div class="form-group">
           <label id="lbl-your-name">Votre nom</label>
-          <select id="mv-name" onchange="updateInfo()"><option value="">— Select your name —</option></select>
+          <select id="mv-name" onchange="fillSels();updateInfo();"><option value="">— Select your name —</option></select>
         </div>
         <div class="form-group">
           <label id="lbl-type">Type</label>
-          <select id="mv-type" onchange="updateInfo()">
+          <select id="mv-type" onchange="fillSels();updateInfo();">
             <option value="sortie">🔴 Sortie (je prends)</option>
             <option value="retour">🟢 Retour (je rapporte)</option>
           </select>
@@ -805,6 +805,17 @@ alter publication supabase_realtime add table log_entries;</div>
     </div>
   </div>
 </div>
+<div id="partial-return-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--white);border-radius:14px;padding:32px 28px;max-width:440px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.2);">
+    <div style="font-family:'EB Garamond',Georgia,serif;font-weight:700;font-size:1.1rem;color:var(--navy);margin-bottom:8px;">📋 Articles encore avec toi</div>
+    <div style="font-size:.88rem;color:var(--muted);margin-bottom:16px;">Tu retournes certains articles, mais il en reste d'autres à ton nom. Confirmes-tu que tu gardes encore ceux-ci ?</div>
+    <div id="partial-return-list" style="background:var(--bg);border-radius:8px;padding:12px 16px;margin-bottom:20px;max-height:200px;overflow-y:auto;font-size:.88rem;line-height:2;"></div>
+    <div style="display:flex;gap:12px;justify-content:flex-end;">
+      <button onclick="confirmPartialReturn()" style="padding:10px 20px;border-radius:9px;border:none;background:var(--navy);color:#fff;font-size:.9rem;cursor:pointer;font-family:inherit;font-weight:600;">Oui, je les garde</button>
+      <button onclick="document.getElementById('partial-return-modal').style.display='none'" style="padding:10px 20px;border-radius:9px;border:1.5px solid var(--border);background:transparent;font-size:.9rem;cursor:pointer;font-family:inherit;">Annuler</button>
+    </div>
+  </div>
+</div>
 </main>
 
 <script>
@@ -1046,10 +1057,33 @@ function renderStats(){
 function getHiddenItems(){ return JSON.parse(localStorage.getItem('hidden_mv_items')||'[]'); }
 function setHiddenItems(arr){ localStorage.setItem('hidden_mv_items', JSON.stringify(arr)); }
 
+// Get items currently out for a person based on log
+function getItemsOutForPerson(personName){
+  const tally = {}; // itemId -> qty out
+  [...log].reverse().forEach(e => {
+    if(e.type === 'broken' || e.person !== personName) return;
+    if(!tally[e.item_id]) tally[e.item_id] = 0;
+    if(e.type === 'sortie') tally[e.item_id] += (parseInt(e.qty)||0);
+    if(e.type === 'retour') tally[e.item_id] = Math.max(0, tally[e.item_id] - (parseInt(e.qty)||0));
+  });
+  return Object.entries(tally)
+    .filter(([,q]) => q > 0)
+    .map(([id, qty]) => ({ id, qty, item: items.find(i=>i.id===id) }))
+    .filter(e => e.item);
+}
+
 function fillSels(){
   const hidden = getHiddenItems();
-  // Fill custom picker for mv-item
-  fillItemPicker(items.filter(it=>!hidden.includes(it.id)));
+  // Fill custom picker for mv-item — filter by what person has out if retour
+  const mvType = document.getElementById('mv-type')?.value || 'sortie';
+  const mvName = document.getElementById('mv-name')?.value || '';
+  let pickerItems = items.filter(it=>!hidden.includes(it.id));
+  if(mvType === 'retour' && mvName){
+    const out = getItemsOutForPerson(mvName);
+    if(out.length) pickerItems = out.map(e=>e.item).filter(Boolean);
+    else pickerItems = [];
+  }
+  fillItemPicker(pickerItems);
   // Fill sig-item native select
   const s=document.getElementById('sig-item'), cur=s.value;
   s.innerHTML='<option value="">— Choisir —</option>';
@@ -1232,6 +1266,7 @@ function renderCart(){
 }
 
 let _pendingSubmit = false;
+let _partialReturnConfirmed = false;
 
 async function submitMv(){
   const type  = document.getElementById('mv-type').value;
@@ -1247,6 +1282,20 @@ async function submitMv(){
     return;
   }
   _pendingSubmit = false;
+
+  // Check if person still has other items out after this return
+  if(type === 'retour' && !_partialReturnConfirmed){
+    const name = document.getElementById('mv-name').value;
+    const returningIds = cart.map(c=>c.itemId);
+    const stillOut = getItemsOutForPerson(name).filter(e => !returningIds.includes(e.id));
+    if(stillOut.length > 0){
+      const list = document.getElementById('partial-return-list');
+      list.innerHTML = stillOut.map(e=>`<div>📦 <strong>${e.item.name}</strong> × ${e.qty}</div>`).join('');
+      document.getElementById('partial-return-modal').style.display = 'flex';
+      return;
+    }
+  }
+  _partialReturnConfirmed = false;
 
   const btn = document.getElementById('mv-submit');
   btn.innerHTML='<span class="spinner"></span> Submitting…';btn.disabled=true;
@@ -1289,6 +1338,12 @@ async function submitMv(){
   btn.innerHTML='✓ Submit all'; btn.disabled=false;
 }
 
+function confirmPartialReturn(){
+  document.getElementById('partial-return-modal').style.display = 'none';
+  _partialReturnConfirmed = true;
+  submitMv();
+}
+
 function defectAnswer(hasDefect){
   document.getElementById('defect-modal').style.display = 'none';
   if(hasDefect){
@@ -1316,6 +1371,7 @@ function resetMv(){
   if(document.getElementById('retour-damage-desc')) document.getElementById('retour-damage-desc').value='';
   if(document.getElementById('retour-damage-box')) document.getElementById('retour-damage-box').style.display='none';
   retourSev='';
+  _partialReturnConfirmed=false;
   renderCart();
 }
 
@@ -1626,9 +1682,49 @@ const DEFAULT_NAMES = [
 
 let teamNames = JSON.parse(localStorage.getItem('team_names') || 'null') || [...DEFAULT_NAMES];
 
-function saveNames(){ localStorage.setItem('team_names', JSON.stringify(teamNames)); }
+function saveNames(){ localStorage.setItem('team_names', JSON.stringify(teamNames)); fillLocDropdowns(); }
+
+function fillLocDropdowns(){
+  const BASE_LOCS = ["Salle d'entreposage", 'Deep storage', 'Armoire'];
+  // [select_id, blank_label, blank_value]
+  const configs = [
+    ['admin-item-loc', '— No location —', ''],
+    ['edit-item-loc',  '— No location —', ''],
+    ['bulk-loc',       "— Changer l'emplacement —", '__none__'],
+    ['floc',           'Tous les emplacements', ''],
+  ];
+  configs.forEach(([sid, blankLabel, blankVal]) => {
+    const sel = document.getElementById(sid);
+    if(!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '';
+    const blank = document.createElement('option');
+    blank.value = blankVal; blank.textContent = blankLabel;
+    sel.appendChild(blank);
+    BASE_LOCS.forEach(loc => {
+      const o = document.createElement('option');
+      o.value = loc; o.textContent = loc;
+      sel.appendChild(o);
+    });
+    if(sid !== 'floc'){
+      // Separator
+      const sep = document.createElement('option');
+      sep.disabled = true; sep.textContent = '── Représentants ──';
+      sel.appendChild(sep);
+      // Team names
+      teamNames.forEach(name => {
+        const o = document.createElement('option');
+        o.value = name; o.textContent = name;
+        sel.appendChild(o);
+      });
+    }
+    // Restore selection
+    if(cur) sel.value = cur;
+  });
+}
 
 function fillNameDropdowns(){
+  fillLocDropdowns();
   ['mv-name','sig-name'].forEach(sid => {
     const s = document.getElementById(sid), cur = s.value;
     s.innerHTML = '<option value="">— Select your name —</option>';
@@ -1795,6 +1891,9 @@ function openEdit(id){
   const matchedKey = Object.keys(SECS).find(k => k.split('/')[0] === curPrefix) || '';
   catSel.value = matchedKey;
 
+  fillLocDropdowns();
+  // Restore loc selection after fillLocDropdowns resets it
+  document.getElementById('edit-item-loc').value = it.loc || '';
   const modal = document.getElementById('edit-modal');
   modal.style.display = 'flex';
 }
