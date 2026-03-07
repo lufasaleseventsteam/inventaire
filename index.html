@@ -640,7 +640,6 @@ alter publication supabase_realtime add table log_entries;</div>
         <button class="btn btn-primary" id="btn-load-inv" onclick="seedInventory()" style="white-space:nowrap;">Charger l'inventaire</button>
       </div>
 
-
       <!-- Reset inventory quantities -->
       <div style="background:var(--ice);border:1px solid var(--amber);border-radius:10px;padding:16px;margin-bottom:20px;">
         <div style="font-weight:600;font-size:.9rem;color:var(--navy);margin-bottom:4px;">🔄 Réinitialiser les quantités</div>
@@ -733,6 +732,9 @@ alter publication supabase_realtime add table log_entries;</div>
     </div>
 
     <!-- Edit modal -->
+
+  </div>
+
     <div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;padding:24px;">
       <div style="background:var(--white);border-radius:14px;padding:28px;max-width:480px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.2);">
         <div style="font-family:'EB Garamond',Georgia,serif;font-weight:700;font-size:1rem;color:var(--navy);margin-bottom:18px;">✏️ Edit Item</div>
@@ -785,7 +787,6 @@ alter publication supabase_realtime add table log_entries;</div>
         </div>
       </div>
     </div>
-  </div>
 </main>
 
 <script>
@@ -1108,7 +1109,6 @@ document.addEventListener('click', function(e){
   const wrap = document.getElementById('mv-item-wrap');
   if(wrap && !wrap.contains(e.target)) closeItemPicker();
 });
-
 
 function updateInfo(){
   const id=document.getElementById('mv-item').value;
@@ -1572,7 +1572,6 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb();});
 
 function shAl(el,t,m){el.className=`alert alert-${t} show`;el.textContent=m;setTimeout(()=>el.classList.remove('show'),6000);}
 
-
 // ═══════════════════════════════════════════════════════
 // TEAM NAMES
 // ═══════════════════════════════════════════════════════
@@ -1655,7 +1654,6 @@ async function addItem(){
   }catch(e){ shAl(al,'error','Error: '+e.message); }
 }
 
-
 // ═══════════════════════════════════════════════════════
 // ADMIN — ITEMS
 // ═══════════════════════════════════════════════════════
@@ -1685,7 +1683,6 @@ function renderAdminItems(){
     const isHidden = hidden.includes(it.id);
     const div = document.createElement('div');
     div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border);flex-wrap:wrap;';
-
 
 
     const nameSpan = document.createElement('span');
@@ -1816,7 +1813,6 @@ async function deleteItem(id){
 }
 
 
-
 // ═══════════════════════════════════════════════════════
 // INVENTAIRE PIN
 // ═══════════════════════════════════════════════════════
@@ -1849,7 +1845,6 @@ function checkAdminPin(btn,fromBottomNav){
   }
 }
 
-
 // ═══════════════════════════════════════════════════════
 // SEED INVENTORY
 // ═══════════════════════════════════════════════════════
@@ -1864,7 +1859,6 @@ async function seedInventory(){
     shAl(al, 'error', 'Error: ' + e.message);
   }
 }
-
 
 // ═══════════════════════════════════════════════════════
 // QUI A QUOI
@@ -1931,7 +1925,6 @@ function renderQuiAQuoi(){
     </div>`).join('');
 }
 
-
 // ═══════════════════════════════════════════════════════
 // QUICK RENAME (from inventory table)
 // ═══════════════════════════════════════════════════════
@@ -1944,7 +1937,6 @@ async function quickRename(id){
     await loadAll(); renderTable(); fillSels();
   }catch(e){ alert('Error: '+e.message); }
 }
-
 
 // ═══════════════════════════════════════════════════════
 // LANGUAGE
@@ -2117,7 +2109,6 @@ function applyLang(){
 function setSafeText(id, txt){ const el=document.getElementById(id); if(el) el.textContent=txt; }
 function setSafeAttr(id, attr, val){ const el=document.getElementById(id); if(el) el.setAttribute(attr,val); }
 
-
 // ═══════════════════════════════════════════════════════
 // MAIN PIN GATE
 // ═══════════════════════════════════════════════════════
@@ -2165,7 +2156,6 @@ document.addEventListener('keydown', e => {
     else if(e.key === 'Enter') pinSubmit();
   }
 });
-
 
 // ═══════════════════════════════════════════════════════
 // PERSON LOG MODAL
@@ -2216,7 +2206,6 @@ document.getElementById('person-log-modal')?.addEventListener('click', function(
   if(e.target === this) closePersonLog();
 });
 
-
 // ═══════════════════════════════════════════════════════
 // ITEM BREAKDOWN
 // ═══════════════════════════════════════════════════════
@@ -2266,7 +2255,6 @@ function toggleBreakdown(itemId, tr){
     <div class="breakdown-grid">${chips}</div>`;
   panel.classList.add('open');
 }
-
 
 // Qty button delegation
 document.addEventListener('click', function(e){
@@ -2320,7 +2308,6 @@ async function clearLog(){
     shAl(al, 'success', '✓ Historique effacé.');
   }catch(e){ shAl(al, 'error', 'Erreur : ' + e.message); }
 }
-
 
 // ═══════════════════════════════════════════════════════
 // BULK EDIT & CATEGORY FILTER
@@ -2464,4 +2451,3 @@ initApp();
 </div>
 </body>
 </html>
-     
