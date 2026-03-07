@@ -404,6 +404,10 @@ alter publication supabase_realtime add table log_entries;</div>
 <header>
   <div class="logo" style="display:flex;align-items:center;gap:10px;"><img id="logo-header" src="" style="height:42px;width:42px;object-fit:contain;border-radius:50%;background:#fff;padding:2px;" alt="Lufa"><span style="font-family:'EB Garamond',Georgia,serif;font-weight:700;font-size:1.15rem;color:#fff;letter-spacing:.01em;">Inventaire <span style="color:var(--sky)">Entreposage</span></span></div>
   <div style="display:flex;align-items:center;gap:8px;">
+    <div id="user-info" style="display:flex;align-items:center;gap:6px;">
+      <span id="user-name" style="font-size:.75rem;color:rgba(255,255,255,.7);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <button onclick="logoutGoogle()" title="Déconnexion" style="padding:4px 10px;border-radius:20px;border:1.5px solid rgba(255,255,255,.25);background:transparent;color:#a0bcdc;font-size:.75rem;cursor:pointer;font-family:'EB Garamond',Georgia,serif;transition:all .15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#a0bcdc'">⎋ Déconnexion</button>
+    </div>
     <button id="lang-toggle" onclick="toggleLang()" style="padding:4px 12px;border-radius:20px;border:1.5px solid rgba(255,255,255,.25);background:transparent;color:#a0bcdc;font-size:.75rem;cursor:pointer;font-family:'EB Garamond',Georgia,serif;transition:all .15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#a0bcdc'">EN</button>
     <span id="sync-pill" class="sync-pill loading">⏳ Connexion…</span>
     <div class="tab-bar">
@@ -939,6 +943,8 @@ async function initApp(){
     if(stored){
       window._lufa_user = JSON.parse(stored);
       document.getElementById('pin-gate').style.display = 'none';
+      const un = document.getElementById('user-name');
+      if(un) un.textContent = window._lufa_user.name || window._lufa_user.email || '';
     }
   } catch(e){}
   setSyncPill('loading','⏳ Chargement…');
@@ -2153,6 +2159,17 @@ function pinSubmit(){
   // Legacy - no longer used for main gate
 }
 
+function logoutGoogle(){
+  localStorage.removeItem('lufa_user');
+  window._lufa_user = null;
+  document.getElementById('pin-gate').style.display = 'flex';
+  document.getElementById('pin-error').textContent = '';
+  // Re-render Google button
+  if(window.google && google.accounts && google.accounts.id){
+    google.accounts.id.disableAutoSelect();
+  }
+}
+
 function handleGoogleLogin(response){
   try {
     // Decode JWT payload
@@ -2167,8 +2184,10 @@ function handleGoogleLogin(response){
     // Store user info
     window._lufa_user = { email, name, picture: payload.picture || '' };
     localStorage.setItem('lufa_user', JSON.stringify(window._lufa_user));
-    // Hide gate
+    // Hide gate and show user name
     document.getElementById('pin-gate').style.display = 'none';
+    const un = document.getElementById('user-name');
+    if(un) un.textContent = name;
     // Pre-fill name in movement form if it matches a team member
     const sel = document.getElementById('mv-person');
     if(sel){
