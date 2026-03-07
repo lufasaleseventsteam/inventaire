@@ -531,10 +531,11 @@ alter publication supabase_realtime add table log_entries;</div>
     </div>
     <div class="inv-wrap">
       <div class="inv-table-wrap"><table><thead><tr>
-        <th>ID</th><th>Article</th>
+        <th>Article</th>
         <th style="text-align:center">Qté totale</th>
         <th style="text-align:center">Disponible</th>
         <th>Statut</th>
+        <th style="text-align:center"></th>
       </tr></thead><tbody id="inv-tbody"></tbody></table></div>
     <div class="inv-cards" id="inv-cards"></div>
     </div>
@@ -1422,7 +1423,7 @@ function renderTable(){
       badge = `<span class="badge bg">${t('in_stock')}</span>`;
     }
     tr.className = 'inv-row';
-    tr.innerHTML=`<td><strong style="font-weight:500">${it.name}</strong> <button onclick=\"event.stopPropagation();quickRename(this.dataset.iid)\" data-iid=\"" + it.id + "\" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:2px 5px;border-radius:4px;margin-left:4px;" title="Rename" onmouseover="this.style.color='var(--mid)'" onmouseout="this.style.color='var(--muted)'">✏️</button></td>
+    tr.innerHTML=`<td><strong style="font-weight:500">${it.name}</strong></td>
       <td class="qty"><div class="qty-edit">
         <button class="qty-btn qty-total-minus" data-id="${it.id}">−</button>
         <span class="qty-num">${it.qty!==null?it.qty:'—'}</span>
@@ -1432,7 +1433,12 @@ function renderTable(){
         <button class="qty-btn qty-minus" data-id="${it.id}">−</button>
         <span class="qty-num">${it.avail!==null?it.avail:'—'}</span>
         <button class="qty-btn qty-plus" data-id="${it.id}">+</button>
-      </div></td><td style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${badge} <button onclick="event.stopPropagation();openEdit('${it.id}')" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.8rem;padding:2px 5px;border-radius:5px;" title="Modifier" onmouseover="this.style.color='var(--navy)'" onmouseout="this.style.color='var(--muted)'">✏️</button><span style="font-size:.7rem;color:var(--muted);margin-left:2px;">▾</span></td>`;
+      </div></td>
+      <td>${badge}</td>
+      <td style="text-align:center;white-space:nowrap;">
+        <button class="inv-edit-btn" data-id="${it.id}" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.85rem;padding:3px 6px;border-radius:5px;" title="Modifier">✏️</button>
+        <span style="font-size:.7rem;color:var(--muted);">▾</span>
+      </td>`;
     (function(itemId, row){
     row.onclick = (e) => {
       if(e.target.classList.contains('qty-total-minus')){ chTotal(itemId,-1); return; }
@@ -1440,6 +1446,7 @@ function renderTable(){
       if(e.target.classList.contains('qty-minus')){ chAvail(itemId,-1); return; }
       if(e.target.classList.contains('qty-plus')){ chAvail(itemId,+1); return; }
       if(e.target.classList.contains('qty-btn')) return;
+      if(e.target.classList.contains('inv-edit-btn')){ openEdit(itemId); return; }
       toggleBreakdown(itemId, row);
     };
   })(it.id, tr);
@@ -2457,4 +2464,3 @@ initApp();
 </div>
 </body>
 </html>
-     
