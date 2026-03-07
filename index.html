@@ -274,6 +274,7 @@
   }
 
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -377,31 +378,26 @@ alter publication supabase_realtime add table log_entries;</div>
 
 <!-- MAIN PIN GATE -->
 <div id="pin-gate" style="position:fixed;inset:0;background:var(--navy);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;">
-  <div style="background:var(--white);border-radius:16px;padding:36px 32px;max-width:360px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3);">
+  <div style="background:var(--white);border-radius:16px;padding:40px 32px;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3);">
     <img id="logo-pin" src="" style="height:72px;width:72px;object-fit:contain;border-radius:50%;margin-bottom:20px;" alt="Lufa">
     <div style="font-family:'EB Garamond',Georgia,serif;font-weight:700;font-size:1.4rem;color:var(--navy);margin-bottom:6px;">Inventaire Entreposage</div>
-    <div style="font-size:.88rem;color:var(--muted);margin-bottom:28px;">Les Fermes Lufa</div>
-    <div style="display:flex;justify-content:center;gap:12px;margin-bottom:24px;" id="pin-dots">
-      <div class="pin-dot"></div>
-      <div class="pin-dot"></div>
-      <div class="pin-dot"></div>
-      <div class="pin-dot"></div>
+    <div style="font-size:.88rem;color:var(--muted);margin-bottom:32px;">Les Fermes Lufa</div>
+    <div id="g_id_onload"
+      data-client_id="501413490319-vaqb2l50chph4blgthqe1dso0t2ei5l0.apps.googleusercontent.com"
+      data-callback="handleGoogleLogin"
+      data-auto_prompt="false">
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
-      <button class="pin-btn" onclick="pinPress('1')">1</button>
-      <button class="pin-btn" onclick="pinPress('2')">2</button>
-      <button class="pin-btn" onclick="pinPress('3')">3</button>
-      <button class="pin-btn" onclick="pinPress('4')">4</button>
-      <button class="pin-btn" onclick="pinPress('5')">5</button>
-      <button class="pin-btn" onclick="pinPress('6')">6</button>
-      <button class="pin-btn" onclick="pinPress('7')">7</button>
-      <button class="pin-btn" onclick="pinPress('8')">8</button>
-      <button class="pin-btn" onclick="pinPress('9')">9</button>
-      <button class="pin-btn pin-btn-clear" onclick="pinClear()" style="grid-column:1;">✕</button>
-      <button class="pin-btn" onclick="pinPress('0')">0</button>
-      <button class="pin-btn pin-btn-go" onclick="pinSubmit()" style="background:var(--navy);color:#fff;">→</button>
+    <div class="g_id_signin"
+      data-type="standard"
+      data-size="large"
+      data-theme="outline"
+      data-text="sign_in_with"
+      data-shape="rectangular"
+      data-logo_alignment="left"
+      data-width="280">
     </div>
-    <div id="pin-error" style="font-size:.82rem;color:var(--red);min-height:20px;"></div>
+    <div id="pin-error" style="font-size:.82rem;color:var(--red);min-height:20px;margin-top:16px;"></div>
+    <div style="font-size:.75rem;color:var(--muted);margin-top:12px;">Connexion réservée aux comptes @lufa.com</div>
   </div>
 </div>
 
@@ -937,6 +933,14 @@ async function saveConfig(){
 // INIT
 // ═══════════════════════════════════════════════════════
 async function initApp(){
+  // Restore Google session if already logged in
+  try {
+    const stored = localStorage.getItem('lufa_user');
+    if(stored){
+      window._lufa_user = JSON.parse(stored);
+      document.getElementById('pin-gate').style.display = 'none';
+    }
+  } catch(e){}
   setSyncPill('loading','⏳ Chargement…');
   try{
     await loadAll();
@@ -2146,15 +2150,38 @@ function updatePinDots(){
 }
 
 function pinSubmit(){
-  if(pinEntry === MAIN_PIN){
+  // Legacy - no longer used for main gate
+}
+
+function handleGoogleLogin(response){
+  try {
+    // Decode JWT payload
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    const email = payload.email || '';
+    const name = payload.name || '';
+    const domain = email.split('@')[1] || '';
+    if(domain !== 'lufa.com'){
+      document.getElementById('pin-error').textContent = '⚠ Accès réservé aux comptes @lufa.com';
+      return;
+    }
+    // Store user info
+    window._lufa_user = { email, name, picture: payload.picture || '' };
+    localStorage.setItem('lufa_user', JSON.stringify(window._lufa_user));
+    // Hide gate
     document.getElementById('pin-gate').style.display = 'none';
-  } else {
-    const box = document.querySelector('#pin-gate > div');
-    box.classList.add('pin-gate-shake');
-    setTimeout(()=>box.classList.remove('pin-gate-shake'), 300);
-    document.getElementById('pin-error').textContent = 'Incorrect PIN. Try again.';
-    pinEntry = '';
-    updatePinDots();
+    // Pre-fill name in movement form if it matches a team member
+    const sel = document.getElementById('mv-person');
+    if(sel){
+      const firstName = name.split(' ')[0];
+      for(let o of sel.options){
+        if(o.text.toLowerCase().includes(firstName.toLowerCase())){
+          sel.value = o.value;
+          break;
+        }
+      }
+    }
+  } catch(e) {
+    document.getElementById('pin-error').textContent = 'Erreur de connexion. Réessayez.';
   }
 }
 
