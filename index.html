@@ -691,6 +691,12 @@ alter publication supabase_realtime add table log_entries;</div>
             <label id="lbl-admin-qty">Quantité totale</label>
             <input type="number" id="admin-item-qty" min="0" placeholder="0">
           </div>
+          <div class="form-group full">
+            <label>Catégorie</label>
+            <select id="admin-item-cat">
+              <option value="">— Choisir une catégorie —</option>
+            </select>
+          </div>
         </div>
         <div class="btn-row" style="margin-top:14px;">
           <button class="btn btn-primary" onclick="addItem()">+ Add Item</button>
@@ -990,7 +996,7 @@ function showTab(id,btn){
   if(id==='inventaire')renderTable();
   if(id==='journal')renderLog();
   if(id==='mouvement'){renderStats();fillSels();}
-  if(id==='admin'){renderNamesList();renderAdminItems();}
+  if(id==='admin'){renderNamesList();renderAdminItems();fillCatFilter();fillAddItemCat();}
   if(id==='quiaquoi'){renderQuiAQuoi();}
   if(id==='signaler'){fillSels();renderDmg();}
 }
@@ -1636,8 +1642,9 @@ function removeName(i){
 // ═══════════════════════════════════════════════════════
 async function addItem(){
   const name = document.getElementById('admin-item-name').value.trim();
-  // Auto-generate ID from first 3 letters of name + timestamp suffix
-  const prefix = name.replace(/[^a-zA-Z]/g,'').substring(0,3).toUpperCase() || 'ART';
+  const catPrefix = document.getElementById('admin-item-cat').value;
+  // Use category prefix if chosen, otherwise fall back to first 3 letters of name
+  const prefix = catPrefix ? catPrefix.split('/')[0] : (name.replace(/[^a-zA-Z]/g,'').substring(0,3).toUpperCase() || 'ART');
   const suffix = String(Date.now()).slice(-4);
   const id = prefix + '-' + suffix;
   document.getElementById('admin-item-id').value = id;
@@ -1650,7 +1657,7 @@ async function addItem(){
     await sbUpsert('items',[{id, name, loc, qty, avail:qty, status:''}]);
     await loadAll(); fillSels(); renderStats();
     shAl(al,'success',`✓ "${name}" added to inventory.`);
-    ['admin-item-id','admin-item-name','admin-item-loc','admin-item-qty'].forEach(f=>document.getElementById(f).value='');
+    ['admin-item-id','admin-item-name','admin-item-loc','admin-item-qty','admin-item-cat'].forEach(f=>document.getElementById(f).value='');
   }catch(e){ shAl(al,'error','Error: '+e.message); }
 }
 
@@ -1977,6 +1984,8 @@ const T = {
     added: "\u2713 Ajout\u00e9 \u00e0 l'inventaire.",
     err_id_name: "L'ID et le nom sont requis.",
     err_id_exists: "Un article avec cet ID existe déjà.",
+    load_inventory: "Charger l'inventaire",
+    search_items: '🔍 Rechercher un article…',
   },
   en: {
     tab_mouvement: 'Movement', tab_inventaire: 'Inventory', tab_signaler: '⚠ Report',
@@ -2002,6 +2011,8 @@ const T = {
     init_title: '🗂 Initialize Inventory',
     init_desc: 'If your inventory is empty, click this to load all default items.',
     add_name_ph: 'Full name…', add_btn: '+ Add',
+    load_inventory: 'Load inventory',
+    search_items: '🔍 Search items…',
   }
 };
 
@@ -2359,6 +2370,22 @@ async function applyBulk(){
   }catch(e){ shAl(al, 'error', 'Erreur : ' + e.message); }
 }
 
+function fillAddItemCat(){
+  const sel = document.getElementById('admin-item-cat');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— Choisir une catégorie —</option>';
+  const seen = [];
+  Object.entries(SECS).forEach(([prefix, label]) => {
+    if(!seen.includes(label)){
+      seen.push(label);
+      const o = document.createElement('option');
+      o.value = prefix;
+      o.textContent = label;
+      sel.appendChild(o);
+    }
+  });
+}
+
 function fillCatFilter(){
   const sel = document.getElementById('admin-cat-filter');
   if(!sel) return;
@@ -2451,4 +2478,3 @@ initApp();
 </div>
 </body>
 </html>
-     
