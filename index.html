@@ -1441,12 +1441,12 @@ function renderTable(){
       </td>`;
     (function(itemId, row){
     row.onclick = (e) => {
-      if(e.target.classList.contains('qty-total-minus')){ chTotal(itemId,-1); return; }
-      if(e.target.classList.contains('qty-total-plus')){ chTotal(itemId,+1); return; }
-      if(e.target.classList.contains('qty-minus')){ chAvail(itemId,-1); return; }
-      if(e.target.classList.contains('qty-plus')){ chAvail(itemId,+1); return; }
-      if(e.target.classList.contains('qty-btn')) return;
-      if(e.target.classList.contains('inv-edit-btn')){ openEdit(itemId); return; }
+      if(e.target.closest('.qty-total-minus')){ chTotal(itemId,-1); return; }
+      if(e.target.closest('.qty-total-plus')){ chTotal(itemId,+1); return; }
+      if(e.target.closest('.qty-minus')){ chAvail(itemId,-1); return; }
+      if(e.target.closest('.qty-plus')){ chAvail(itemId,+1); return; }
+      if(e.target.closest('.qty-btn')) return;
+      if(e.target.closest('.inv-edit-btn')){ openEdit(itemId); return; }
       toggleBreakdown(itemId, row);
     };
   })(it.id, tr);
@@ -2451,4 +2451,3 @@ initApp();
 </div>
 </body>
 </html>
-      
