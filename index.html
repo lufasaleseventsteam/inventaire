@@ -521,7 +521,7 @@ alter publication supabase_realtime add table log_entries;</div>
       <input type="text" id="srch" placeholder="🔍 Rechercher…" oninput="renderTable()">
       <select id="floc" onchange="renderTable()">
         <option value="">Tous les emplacements</option>
-        <option>Petite salle</option><option>Grande salle</option><option>Armoire</option>
+        <option>Salle d'entreposage</option><option>Deep storage</option><option>Armoire</option>
       </select>
       <select id="fst" onchange="renderTable()">
         <option value="">Tous les statuts</option>
@@ -647,7 +647,7 @@ alter publication supabase_realtime add table log_entries;</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <div style="flex:1;min-width:200px;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px;">
             <div style="font-weight:600;font-size:.85rem;color:var(--navy);margin-bottom:4px;">Mettre tout à 0</div>
-            <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px;">Toutes les quantités disponibles passent à 0 (tout est marqué comme sorti).</div>
+            <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px;">Remet toutes les quantités à 0 et efface tout l'historique. Aucun article ne sera marqué comme sorti.</div>
             <button class="btn" onclick="resetToZero()" style="background:var(--red);color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.82rem;width:100%;">Mettre à 0</button>
           </div>
           <div style="flex:1;min-width:200px;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px;">
@@ -680,11 +680,9 @@ alter publication supabase_realtime add table log_entries;</div>
             <label id="lbl-admin-loc">Emplacement</label>
             <select id="admin-item-loc">
               <option value="">— No location —</option>
-              <option value="Petite salle">Petite salle</option>
-              <option value="Grande salle">Grande salle</option>
+              <option value="Salle d'entreposage">Salle d'entreposage</option>
+              <option value="Deep storage">Deep storage</option>
               <option value="Armoire">Armoire</option>
-              <option value="Petite salle / Grande salle">Petite salle / Grande salle</option>
-              <option value="Petite salle / Armoire">Petite salle / Armoire</option>
             </select>
           </div>
           <div class="form-group">
@@ -725,10 +723,9 @@ alter publication supabase_realtime add table log_entries;</div>
         </select>
         <select id="bulk-loc" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.82rem;background:var(--white);">
           <option value="__none__">— Changer l'emplacement —</option>
-          <option value="Petite salle">Petite salle</option>
-          <option value="Grande salle">Grande salle</option>
+          <option value="Salle d'entreposage">Salle d'entreposage</option>
+          <option value="Deep storage">Deep storage</option>
           <option value="Armoire">Armoire</option>
-          <option value="Petite salle / Grande salle">Petite salle / Grande salle</option>
         </select>
         <button onclick="applyBulk()" style="padding:7px 14px;border-radius:8px;border:none;background:var(--navy);color:#fff;font-size:.82rem;cursor:pointer;font-family:inherit;font-weight:600;">Appliquer</button>
         <button onclick="toggleBulkMode()" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--border);background:transparent;font-size:.82rem;cursor:pointer;font-family:inherit;">Annuler</button>
@@ -754,11 +751,9 @@ alter publication supabase_realtime add table log_entries;</div>
             <label id="lbl-admin-loc">Emplacement</label>
             <select id="edit-item-loc">
               <option value="">— No location —</option>
-              <option value="Petite salle">Petite salle</option>
-              <option value="Grande salle">Grande salle</option>
+              <option value="Salle d'entreposage">Salle d'entreposage</option>
+              <option value="Deep storage">Deep storage</option>
               <option value="Armoire">Armoire</option>
-              <option value="Petite salle / Grande salle">Petite salle / Grande salle</option>
-              <option value="Petite salle / Armoire">Petite salle / Armoire</option>
             </select>
           </div>
           <div class="form-group">
@@ -793,6 +788,23 @@ alter publication supabase_realtime add table log_entries;</div>
         </div>
       </div>
     </div>
+<div id="reset-zero-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--white);border-radius:14px;padding:32px 28px;max-width:420px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.2);text-align:center;">
+    <div style="font-size:2.5rem;margin-bottom:12px;">⚠️</div>
+    <div style="font-family:'EB Garamond',Georgia,serif;font-weight:700;font-size:1.2rem;color:var(--red);margin-bottom:12px;">Réinitialisation complète</div>
+    <div style="font-size:.9rem;color:var(--navy);margin-bottom:8px;line-height:1.6;">Cette action va :</div>
+    <div style="font-size:.88rem;color:var(--muted);margin-bottom:20px;line-height:1.8;text-align:left;padding:0 12px;">
+      • Mettre toutes les quantités disponibles à <strong>0</strong><br>
+      • Effacer tout l'historique des mouvements<br>
+      • Retirer tous les articles assignés à des personnes
+    </div>
+    <div style="font-size:.88rem;font-weight:700;color:var(--red);margin-bottom:24px;">Cette action est irréversible.</div>
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button onclick="confirmResetToZero()" style="padding:10px 24px;border-radius:9px;border:none;background:var(--red);color:#fff;font-size:.9rem;cursor:pointer;font-family:inherit;font-weight:600;">Oui, tout réinitialiser</button>
+      <button onclick="document.getElementById('reset-zero-modal').style.display='none'" style="padding:10px 24px;border-radius:9px;border:1.5px solid var(--border);background:transparent;font-size:.9rem;cursor:pointer;font-family:inherit;">Annuler</button>
+    </div>
+  </div>
+</div>
 </main>
 
 <script>
@@ -814,63 +826,63 @@ const SECS={
 };
 
 const DEFAULT_ITEMS=[
-  {id:"BAN-01",name:"Kit bannière",loc:"Petite salle",qty:4,avail:4,status:"En stock"},
-  {id:"BAN-02",name:"Kit bannière (sans tissu)",loc:"Grande salle",qty:3,avail:3,status:""},
-  {id:"BAN-03",name:"Bannière (tissu)",loc:"Petite salle",qty:8,avail:8,status:""},
-  {id:"BAN-04",name:"Sac bannière + dessus structure",loc:"Grande salle",qty:5,avail:5,status:""},
-  {id:"AFF-01",name:"Affiches",loc:"Petite salle / Grande salle",qty:null,avail:null,status:""},
-  {id:"QR-01",name:"Carton QR à scanner",loc:"Petite salle",qty:9,avail:9,status:"À commander"},
-  {id:"POI-01",name:"Poids légers",loc:"Petite salle",qty:35,avail:35,status:"En stock"},
-  {id:"POI-02",name:"Poids gravier",loc:"Petite salle",qty:6,avail:6,status:""},
-  {id:"POI-03",name:"Sac poids gravier",loc:"Grande salle",qty:null,avail:null,status:""},
-  {id:"TRA-01",name:"Chariots bleus",loc:"Petite salle",qty:4,avail:4,status:"En stock"},
+  {id:"BAN-01",name:"Kit bannière",loc:"Salle d'entreposage",qty:4,avail:4,status:"En stock"},
+  {id:"BAN-02",name:"Kit bannière (sans tissu)",loc:"Deep storage",qty:3,avail:3,status:""},
+  {id:"BAN-03",name:"Bannière (tissu)",loc:"Salle d'entreposage",qty:8,avail:8,status:""},
+  {id:"BAN-04",name:"Sac bannière + dessus structure",loc:"Deep storage",qty:5,avail:5,status:""},
+  {id:"AFF-01",name:"Affiches",loc:"Salle d'entreposage",qty:null,avail:null,status:""},
+  {id:"QR-01",name:"Carton QR à scanner",loc:"Salle d'entreposage",qty:9,avail:9,status:"À commander"},
+  {id:"POI-01",name:"Poids légers",loc:"Salle d'entreposage",qty:35,avail:35,status:"En stock"},
+  {id:"POI-02",name:"Poids gravier",loc:"Salle d'entreposage",qty:6,avail:6,status:""},
+  {id:"POI-03",name:"Sac poids gravier",loc:"Deep storage",qty:null,avail:null,status:""},
+  {id:"TRA-01",name:"Chariots bleus",loc:"Salle d'entreposage",qty:4,avail:4,status:"En stock"},
   {id:"TRA-02",name:"Diable",loc:"",qty:null,avail:null,status:""},
-  {id:"TAB-01",name:"Table",loc:"Petite salle",qty:6,avail:6,status:"En stock"},
-  {id:"TAB-02",name:"Table pliable grise",loc:"Petite salle",qty:2,avail:2,status:"En stock"},
-  {id:"TAB-03",name:"Tableau pliable",loc:"Grande salle",qty:null,avail:null,status:""},
-  {id:"TEN-01",name:"Chapiteau",loc:"Petite salle",qty:3,avail:3,status:""},
-  {id:"TEN-02",name:"Sac chapiteau",loc:"Grande salle",qty:6,avail:6,status:""},
-  {id:"TEN-03",name:"Tente domestique",loc:"Petite salle",qty:1,avail:1,status:""},
-  {id:"NAP-01",name:"Nappe noire",loc:"Petite salle",qty:15,avail:15,status:""},
-  {id:"NAP-02",name:"Nappe brune",loc:"Petite salle",qty:4,avail:4,status:""},
-  {id:"VET-01",name:"T-shirt S",loc:"Petite salle",qty:null,avail:null,status:"En stock"},
-  {id:"VET-02",name:"T-shirt M",loc:"Petite salle",qty:null,avail:null,status:"En stock"},
-  {id:"VET-03",name:"T-shirt L",loc:"Petite salle",qty:null,avail:null,status:"En stock"},
-  {id:"VET-04",name:"T-shirt XL",loc:"Petite salle",qty:null,avail:null,status:"En stock"},
-  {id:"VET-05",name:"Pull",loc:"Petite salle / Armoire",qty:null,avail:null,status:""},
-  {id:"VET-06",name:"Bandana",loc:"Petite salle",qty:20,avail:20,status:"En stock"},
+  {id:"TAB-01",name:"Table",loc:"Salle d'entreposage",qty:6,avail:6,status:"En stock"},
+  {id:"TAB-02",name:"Table pliable grise",loc:"Salle d'entreposage",qty:2,avail:2,status:"En stock"},
+  {id:"TAB-03",name:"Tableau pliable",loc:"Deep storage",qty:null,avail:null,status:""},
+  {id:"TEN-01",name:"Chapiteau",loc:"Salle d'entreposage",qty:3,avail:3,status:""},
+  {id:"TEN-02",name:"Sac chapiteau",loc:"Deep storage",qty:6,avail:6,status:""},
+  {id:"TEN-03",name:"Tente domestique",loc:"Salle d'entreposage",qty:1,avail:1,status:""},
+  {id:"NAP-01",name:"Nappe noire",loc:"Salle d'entreposage",qty:15,avail:15,status:""},
+  {id:"NAP-02",name:"Nappe brune",loc:"Salle d'entreposage",qty:4,avail:4,status:""},
+  {id:"VET-01",name:"T-shirt S",loc:"Salle d'entreposage",qty:null,avail:null,status:"En stock"},
+  {id:"VET-02",name:"T-shirt M",loc:"Salle d'entreposage",qty:null,avail:null,status:"En stock"},
+  {id:"VET-03",name:"T-shirt L",loc:"Salle d'entreposage",qty:null,avail:null,status:"En stock"},
+  {id:"VET-04",name:"T-shirt XL",loc:"Salle d'entreposage",qty:null,avail:null,status:"En stock"},
+  {id:"VET-05",name:"Pull",loc:"Armoire",qty:null,avail:null,status:""},
+  {id:"VET-06",name:"Bandana",loc:"Salle d'entreposage",qty:20,avail:20,status:"En stock"},
   {id:"VET-07",name:"Bonnet",loc:"",qty:42,avail:42,status:""},
-  {id:"VET-08",name:"Bonnet (ancien)",loc:"Grande salle",qty:null,avail:null,status:""},
+  {id:"VET-08",name:"Bonnet (ancien)",loc:"Deep storage",qty:null,avail:null,status:""},
   {id:"VET-09",name:"Casquette",loc:"",qty:20,avail:20,status:""},
-  {id:"VET-10",name:"Casquette (ancienne)",loc:"Grande salle",qty:null,avail:null,status:""},
+  {id:"VET-10",name:"Casquette (ancienne)",loc:"Deep storage",qty:null,avail:null,status:""},
   {id:"VET-11",name:"Tote-bag",loc:"",qty:null,avail:null,status:""},
-  {id:"VET-12",name:"Tote beige",loc:"Grande salle",qty:null,avail:null,status:""},
+  {id:"VET-12",name:"Tote beige",loc:"Deep storage",qty:null,avail:null,status:""},
   {id:"VET-13",name:"Tablier",loc:"",qty:12,avail:12,status:""},
-  {id:"VET-14",name:"Tablier (ancien)",loc:"Grande salle",qty:null,avail:null,status:""},
-  {id:"PRE-01",name:"Grand caisson bois",loc:"Petite salle",qty:8,avail:8,status:""},
-  {id:"PRE-02",name:"Moyen caisson bois",loc:"Petite salle",qty:8,avail:8,status:""},
-  {id:"PRE-03",name:"Petit caisson bois",loc:"Petite salle",qty:13,avail:13,status:""},
-  {id:"PRE-04",name:"Présentoir ordi",loc:"Petite salle",qty:3,avail:3,status:""},
+  {id:"VET-14",name:"Tablier (ancien)",loc:"Deep storage",qty:null,avail:null,status:""},
+  {id:"PRE-01",name:"Grand caisson bois",loc:"Salle d'entreposage",qty:8,avail:8,status:""},
+  {id:"PRE-02",name:"Moyen caisson bois",loc:"Salle d'entreposage",qty:8,avail:8,status:""},
+  {id:"PRE-03",name:"Petit caisson bois",loc:"Salle d'entreposage",qty:13,avail:13,status:""},
+  {id:"PRE-04",name:"Présentoir ordi",loc:"Salle d'entreposage",qty:3,avail:3,status:""},
   {id:"PRE-05",name:"Présentoir tablette",loc:"",qty:null,avail:null,status:""},
-  {id:"PRE-06",name:"Planche",loc:"Petite salle",qty:6,avail:6,status:""},
+  {id:"PRE-06",name:"Planche",loc:"Salle d'entreposage",qty:6,avail:6,status:""},
   {id:"PRE-07",name:"Support iPad blanc",loc:"",qty:2,avail:2,status:""},
-  {id:"DEG-01",name:"Ravier dégustation (petite salle)",loc:"Petite salle",qty:null,avail:null,status:""},
-  {id:"DEG-02",name:"Ravier dégustation (grande salle)",loc:"Grande salle",qty:null,avail:null,status:""},
+  {id:"DEG-01",name:"Ravier dégustation (salle d'entreposage)",loc:"Salle d'entreposage",qty:null,avail:null,status:""},
+  {id:"DEG-02",name:"Ravier dégustation (deep storage)",loc:"Deep storage",qty:null,avail:null,status:""},
   {id:"DEG-03",name:"Gobelets",loc:"",qty:null,avail:null,status:""},
   {id:"DEG-04",name:"Petits gobelets",loc:"",qty:null,avail:null,status:""},
   {id:"DEG-05",name:"Serviettes",loc:"",qty:null,avail:null,status:""},
   {id:"DEG-06",name:"Cure-dents",loc:"",qty:null,avail:null,status:""},
-  {id:"DEG-07",name:"Passoire",loc:"Petite salle",qty:10,avail:10,status:""},
-  {id:"DEG-08",name:"Couteau",loc:"Petite salle",qty:17,avail:17,status:""},
-  {id:"DEG-09",name:"Pinces",loc:"Petite salle",qty:2,avail:2,status:""},
+  {id:"DEG-07",name:"Passoire",loc:"Salle d'entreposage",qty:10,avail:10,status:""},
+  {id:"DEG-08",name:"Couteau",loc:"Salle d'entreposage",qty:17,avail:17,status:""},
+  {id:"DEG-09",name:"Pinces",loc:"Salle d'entreposage",qty:2,avail:2,status:""},
   {id:"SAC-01",name:"Sacs transparents Lufa",loc:"",qty:null,avail:null,status:""},
   {id:"SAC-02",name:"Sacs bruns compostables",loc:"",qty:null,avail:null,status:""},
   {id:"DIV-01",name:"Tape",loc:"",qty:null,avail:null,status:""},
-  {id:"DIV-02",name:"Autocollants ronds",loc:"Petite salle",qty:null,avail:null,status:""},
+  {id:"DIV-02",name:"Autocollants ronds",loc:"Salle d'entreposage",qty:null,avail:null,status:""},
   {id:"DIV-03",name:"Lampes",loc:"",qty:null,avail:null,status:""},
   {id:"DIV-04",name:"Produits nettoyants",loc:"",qty:null,avail:null,status:""},
-  {id:"DIV-05",name:"Gourde",loc:"Grande salle",qty:14,avail:14,status:""},
-  {id:"DIV-06",name:"Réfrigérateur vitré",loc:"Petite salle",qty:null,avail:null,status:""},
+  {id:"DIV-05",name:"Gourde",loc:"Deep storage",qty:14,avail:14,status:""},
+  {id:"DIV-06",name:"Réfrigérateur vitré",loc:"Salle d'entreposage",qty:null,avail:null,status:""},
 ];
 
 // ═══════════════════════════════════════════════════════
@@ -1247,12 +1259,12 @@ async function submitMv(){
       else if(type==='retour' && newAvail!==null) newAvail = it.qty!==null ? Math.min(it.qty, newAvail+c.qty) : newAvail+c.qty;
       const ops = [
         sbUpdate('items', c.itemId, {avail:newAvail, updated_at:new Date().toISOString()}),
-        sbInsert('log_entries', {id:now+i, type, item_id:c.itemId, item_name:c.itemName, loc:'Petite salle', qty:c.qty, person:name, notes, photos:'[]'})
+        sbInsert('log_entries', {id:now+i, type, item_id:c.itemId, item_name:c.itemName, loc:'Salle d\'entreposage', qty:c.qty, person:name, notes, photos:'[]'})
       ];
       // File damage report if flagged
       if(c.damaged && c.dmgDesc){
-        ops.push(sbInsert('damages',{id:now+i+500,item_id:c.itemId,item_name:c.itemName,loc:'Petite salle',person:name,severity:c.dmgSev||'low',description:c.dmgDesc,photos:'[]',resolved:false}));
-        ops.push(sbInsert('log_entries',{id:now+i+1000,type:'broken',item_id:c.itemId,item_name:c.itemName,loc:'Petite salle',qty:null,person:name,notes:c.dmgDesc,severity:c.dmgSev||'low',photos:'[]'}));
+        ops.push(sbInsert('damages',{id:now+i+500,item_id:c.itemId,item_name:c.itemName,loc:'Salle d\'entreposage',person:name,severity:c.dmgSev||'low',description:c.dmgDesc,photos:'[]',resolved:false}));
+        ops.push(sbInsert('log_entries',{id:now+i+1000,type:'broken',item_id:c.itemId,item_name:c.itemName,loc:'Salle d\'entreposage',qty:null,person:name,notes:c.dmgDesc,severity:c.dmgSev||'low',photos:'[]'}));
       }
       return Promise.all(ops);
     });
@@ -1349,8 +1361,8 @@ async function submitSig(){
   try{
     const photoJson=JSON.stringify(photos.map(p=>p.d));
     const promises=[
-      sbInsert('damages',{id:Date.now(),item_id:iid,item_name:it.name,loc:'Petite salle',person:name,severity:sev,description:desc,photos:photoJson,resolved:false}),
-      sbInsert('log_entries',{id:Date.now()+1,type:'broken',item_id:iid,item_name:it.name,loc:'Petite salle',qty:null,person:name,notes:desc,severity:sev,photos:photoJson})
+      sbInsert('damages',{id:Date.now(),item_id:iid,item_name:it.name,loc:'Salle d\'entreposage',person:name,severity:sev,description:desc,photos:photoJson,resolved:false}),
+      sbInsert('log_entries',{id:Date.now()+1,type:'broken',item_id:iid,item_name:it.name,loc:'Salle d\'entreposage',qty:null,person:name,notes:desc,severity:sev,photos:photoJson})
     ];
     if(nst)promises.push(sbUpdate('items',iid,{status:nst,updated_at:new Date().toISOString()}));
     await Promise.all(promises);
@@ -1446,9 +1458,7 @@ function renderTable(){
         <button class="qty-btn qty-total-plus" data-id="${it.id}">+</button>
       </div></td>
       <td class="qty ${qc}"><div class="qty-edit">
-        <button class="qty-btn qty-minus" data-id="${it.id}">−</button>
         <span class="qty-num">${it.avail!==null?it.avail:'—'}</span>
-        <button class="qty-btn qty-plus" data-id="${it.id}">+</button>
       </div></td>
       <td>${badge}</td>
       <td style="text-align:center;white-space:nowrap;">
@@ -1459,8 +1469,6 @@ function renderTable(){
     row.onclick = (e) => {
       if(e.target.closest('.qty-total-minus')){ chTotal(itemId,-1); return; }
       if(e.target.closest('.qty-total-plus')){ chTotal(itemId,+1); return; }
-      if(e.target.closest('.qty-minus')){ chAvail(itemId,-1); return; }
-      if(e.target.closest('.qty-plus')){ chAvail(itemId,+1); return; }
       if(e.target.closest('.qty-btn')) return;
       if(e.target.closest('.inv-edit-btn')){ openEdit(itemId); return; }
       toggleBreakdown(itemId, row);
@@ -1527,7 +1535,7 @@ function toggleMobileBreakdown(itemId, card){
   const peopleOut=Object.entries(byPerson).filter(([,q])=>q>0);
   const inStorage=it.avail!==null?it.avail:null;
   let chips='';
-  if(inStorage!==null&&inStorage>0) chips+='<div class="breakdown-chip"><span class="bc-name">📦 '+(it.loc||'Petite salle')+'</span><span class="bc-qty">× '+inStorage+'</span></div>';
+  if(inStorage!==null&&inStorage>0) chips+='<div class="breakdown-chip"><span class="bc-name">📦 '+(it.loc||'Non assigné')+'</span><span class="bc-qty">× '+inStorage+'</span></div>';
   peopleOut.forEach(([person,qty])=>{ chips+='<div class="breakdown-chip"><span class="bc-name">👤 '+person+'</span><span class="bc-qty">× '+qty+'</span></div>'; });
   if(!chips) chips='<div style="color:var(--muted);font-size:.82rem;">Aucune donnée.</div>';
   panel.innerHTML='<div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:6px;">Répartition — Total: '+(it.qty||'—')+'</div><div class="breakdown-grid">'+chips+'</div>';
@@ -1548,9 +1556,15 @@ async function chTotal(id,d){
   const it=items.find(i=>i.id===id);if(!it)return;
   let q=it.qty===null?0:it.qty;
   q=Math.max(0,q+d);
-  // Also adjust avail proportionally — if total goes up, avail goes up too
   let a=it.avail===null?0:it.avail;
-  if(d>0) a=Math.min(q,a+d);
+  if(d>0){
+    // New units go to "Non assigné" — avail increases
+    a=Math.min(q,a+d);
+    // Log the addition as a note in log_entries
+    const _ctUser=(window._lufa_user&&window._lufa_user.name)||'Inconnu'; const entry={id:crypto.randomUUID(),item_id:id,item_name:it.name,person:_ctUser,type:'ajout_inventaire',qty:d,loc:'Non assigné',notes:'Ajout via inventaire par '+_ctUser,date:new Date().toISOString()};
+    await sbInsert('log_entries',entry);
+    log.unshift(entry);
+  }
   if(d<0) a=Math.max(0,Math.min(a,q));
   it.qty=q; it.avail=a;
   renderTable();
@@ -1565,8 +1579,15 @@ function renderLog(){
   if(!log.length){el.innerHTML='<div class="log-empty" style="text-align:center;padding:40px;color:var(--muted)">📋 Aucun mouvement enregistré.</div>';return;}
   el.innerHTML=log.map(e=>{
     const brk=e.type==='broken';
-    const dc=brk?'dbrk':e.type==='sortie'?'dout':'din';
-    const lbl=brk?`⚠ Signalement — ${e.item_name}`:e.type==='sortie'?`⬆ Sortie — ${e.item_name}`:`⬇ Retour — ${e.item_name}`;
+    const isAdmin=e.type==='modif_admin'||e.type==='ajout_inventaire'||e.type==='reset_zero'||e.type==='reset_qtotal';
+    const dc=brk||e.type==='reset_zero'?'dbrk':e.type==='sortie'?'dout':isAdmin?'dbrk':'din';
+    const lbl=brk?`⚠ Signalement — ${e.item_name}`:
+      e.type==='sortie'?`⬆ Sortie — ${e.item_name}`:
+      e.type==='modif_admin'?`✏️ Modif admin — ${e.item_name}`:
+      e.type==='ajout_inventaire'?`➕ Ajout stock — ${e.item_name}`:
+      e.type==='reset_zero'?`🔄 Réinitialisation → 0 — ${e.item_name}`:
+      e.type==='reset_qtotal'?`🔄 Quantités restaurées — ${e.item_name}`:
+      `⬇ Retour — ${e.item_name}`;
     let ps=[];try{ps=JSON.parse(e.photos||'[]');}catch(err){}
     const ph=ps.length?`<div class="lphoto-row">${ps.map(p=>`<img class="lphoto" src="${p}" onclick="openLb('${p}')">`).join('')}</div>`:'';
     return `<div class="log-item ${brk?'lb':''}">
@@ -1808,6 +1829,9 @@ async function saveEdit(){
       await sbUpdate('items', id, {name, loc, qty, avail, status, updated_at: new Date().toISOString()});
     }
     await loadAll(); fillSels(); renderStats(); renderAdminItems();
+    // Log the edit
+    const _editUser = (window._lufa_user && window._lufa_user.name) || 'Admin';
+    await sbInsert('log_entries', {id:crypto.randomUUID(), item_id:finalId, item_name:name, person:_editUser, type:'modif_admin', qty:null, loc:loc||'', notes:'Modifié via panneau admin', date:new Date().toISOString()});
     closeEdit();
     shAl(document.getElementById('al-admin'), 'success', '✓ "' + name + '" mis à jour.');
   }catch(e){
@@ -2296,7 +2320,7 @@ function toggleBreakdown(itemId, tr){
 
   let chips = '';
   if(inStorage !== null && inStorage > 0){
-    chips += `<div class="breakdown-chip"><span class="bc-name">📦 ${it.loc || 'Petite salle'}</span><span class="bc-qty">× ${inStorage}</span></div>`;
+    chips += `<div class="breakdown-chip"><span class="bc-name">📦 ${it.loc || 'Non assigné'}</span><span class="bc-qty">× ${inStorage}</span></div>`;
   }
   peopleOut.forEach(([person, qty]) => {
     chips += `<div class="breakdown-chip"><span class="bc-name">👤 ${person}</span><span class="bc-qty">× ${qty}</span></div>`;
@@ -2333,14 +2357,23 @@ document.addEventListener('click', function(e){
 // ═══════════════════════════════════════════════════════
 // RESET & CLEAR LOG
 // ═══════════════════════════════════════════════════════
-async function resetToZero(){
+function resetToZero(){
+  document.getElementById('reset-zero-modal').style.display = 'flex';
+}
+
+async function confirmResetToZero(){
+  document.getElementById('reset-zero-modal').style.display = 'none';
   const al = document.getElementById('al-admin');
-  if(!confirm('Mettre toutes les quantités disponibles à 0 ? Cette action est irréversible.')) return;
   try{
+    // Set all avail to 0
     const updates = items.map(it => sbUpdate('items', it.id, {avail: 0, updated_at: new Date().toISOString()}));
     await Promise.all(updates);
-    await loadAll(); renderStats(); fillSels(); renderAdminItems();
-    shAl(al, 'success', '✓ Toutes les quantités ont été mises à 0.');
+    // Clear entire movement log
+    await fetch(SUPA_URL+'/rest/v1/log_entries?id=neq.00000000-0000-0000-0000-000000000000', {method:'DELETE', headers:hdr()});
+    await loadAll(); renderStats(); fillSels(); renderAdminItems(); renderLog(); renderQuiAQuoi();
+    const _rzUser = (window._lufa_user && window._lufa_user.name) || 'Admin';
+    await sbInsert('log_entries', {id:crypto.randomUUID(), item_id:'ALL', item_name:'Tous les articles', person:_rzUser, type:'reset_zero', qty:null, loc:'', notes:'Réinitialisation complète — tout mis à 0', date:new Date().toISOString()});
+    shAl(al, 'success', '✓ Réinitialisation complète effectuée.');
   }catch(e){ shAl(al, 'error', 'Erreur : ' + e.message); }
 }
 
@@ -2351,6 +2384,8 @@ async function resetQuantities(){
     const updates = items.map(it => sbUpdate('items', it.id, {avail: it.qty, updated_at: new Date().toISOString()}));
     await Promise.all(updates);
     await loadAll(); renderStats(); fillSels(); renderAdminItems();
+    const _rqUser = (window._lufa_user && window._lufa_user.name) || 'Admin';
+    await sbInsert('log_entries', {id:crypto.randomUUID(), item_id:'ALL', item_name:'Tous les articles', person:_rqUser, type:'reset_qtotal', qty:null, loc:'', notes:'Quantités disponibles restaurées à leur valeur totale', date:new Date().toISOString()});
     shAl(al, 'success', '✓ Quantités réinitialisées.');
   }catch(e){ shAl(al, 'error', 'Erreur : ' + e.message); }
 }
@@ -2407,6 +2442,12 @@ async function applyBulk(){
     });
     await Promise.all(updates);
     await loadAll(); renderStats(); fillSels(); renderAdminItems();
+    const _bulkUser = (window._lufa_user && window._lufa_user.name) || 'Admin';
+    const _bulkIds = [...bulkSelected];
+    await Promise.all(_bulkIds.map(bid => {
+      const bit = items.find(i=>i.id===bid);
+      return sbInsert('log_entries', {id:crypto.randomUUID(), item_id:bid, item_name:bit?bit.name:bid, person:_bulkUser, type:'modif_admin', qty:null, loc:'', notes:'Modification groupée via admin', date:new Date().toISOString()});
+    }));
     shAl(al, 'success', '✓ ' + bulkSelected.size + ' article(s) mis à jour.');
     bulkSelected.clear();
     document.getElementById('bulk-status').value = '';
