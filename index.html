@@ -1432,7 +1432,7 @@ function renderTable(){
         <button class="qty-btn qty-minus" data-id="${it.id}">−</button>
         <span class="qty-num">${it.avail!==null?it.avail:'—'}</span>
         <button class="qty-btn qty-plus" data-id="${it.id}">+</button>
-      </div></td><td>${badge} <span style="font-size:.7rem;color:var(--muted);margin-left:4px;">▾</span></td>`;
+      </div></td><td style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${badge} <button onclick="event.stopPropagation();openEdit('${it.id}')" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.8rem;padding:2px 5px;border-radius:5px;" title="Modifier" onmouseover="this.style.color='var(--navy)'" onmouseout="this.style.color='var(--muted)'">✏️</button><span style="font-size:.7rem;color:var(--muted);margin-left:2px;">▾</span></td>`;
     (function(itemId, row){
     row.onclick = (e) => {
       if(e.target.classList.contains('qty-total-minus')){ chTotal(itemId,-1); return; }
@@ -1470,7 +1470,10 @@ function renderMobileCards(f){
       '<div class="inv-card" data-iid="' + it.id + '" onclick="toggleMobileBreakdown(this.dataset.iid,this)">',
       '<div class="inv-card-header">',
       '<span class="inv-card-name">' + it.name + '</span>',
+      '<div style="display:flex;align-items:center;gap:8px;">',
       '<span class="inv-card-id">' + it.id + '</span>',
+      '<button onclick="event.stopPropagation();openEdit(\'' + it.id + '\')" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.85rem;padding:2px 4px;border-radius:5px;" title="Modifier">✏️</button>',
+      '</div>',
       '</div>',
       '<div class="inv-card-row">',
       '<span style="font-size:.82rem;color:var(--muted);">Total: <strong>' + (it.qty!==null?it.qty:'—') + '</strong> &nbsp;|&nbsp; Dispo: <strong style="color:' + availColor + '">' + (it.avail!==null?it.avail:'—') + '</strong></span>',
