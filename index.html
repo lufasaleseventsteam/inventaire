@@ -1707,14 +1707,17 @@ function renderAdminItems(){
       const bulkChk = document.createElement('input');
       bulkChk.type = 'checkbox';
       bulkChk.checked = bulkSelected.has(it.id);
-      bulkChk.style.cssText = 'width:17px;height:17px;cursor:pointer;flex-shrink:0;accent-color:var(--navy);';
+      bulkChk.style.cssText = 'width:18px;height:18px;cursor:pointer;flex-shrink:0;accent-color:var(--navy);margin-right:4px;';
       bulkChk.addEventListener('change', (function(id){ return function(){ toggleBulkItem(id, this.checked); }; })(it.id));
-      div.appendChild(bulkChk);
+      div.insertBefore(bulkChk, div.firstChild);
+      div.appendChild(nameSpan);
+      div.appendChild(label);
+    } else {
+      div.appendChild(nameSpan);
+      div.appendChild(label);
+      div.appendChild(editBtn);
+      div.appendChild(delBtn);
     }
-    div.appendChild(nameSpan);
-    div.appendChild(label);
-    if(!bulkMode) div.appendChild(editBtn);
-    if(!bulkMode) div.appendChild(delBtn);
     el.appendChild(div);
   });
 }
@@ -1741,9 +1744,11 @@ function openEdit(id){
       catSel.appendChild(o);
     }
   });
-  // Pre-select current category
+  // Pre-select current category — match item prefix to SECS key
   const curPrefix = id.split('-')[0];
-  catSel.value = curPrefix in SECS ? curPrefix : '';
+  // Find SECS key whose first segment matches curPrefix (e.g. 'BAN' matches 'BAN/AFF/QR')
+  const matchedKey = Object.keys(SECS).find(k => k.split('/')[0] === curPrefix) || '';
+  catSel.value = matchedKey;
 
   const modal = document.getElementById('edit-modal');
   modal.style.display = 'flex';
@@ -2449,4 +2454,3 @@ initApp();
 </div>
 </body>
 </html>
-      
