@@ -435,6 +435,10 @@ alter publication supabase_realtime add table log_entries;</div>
           <label id="lbl-your-name">Votre nom</label>
           <select id="mv-name" onchange="fillSels();updateInfo();"><option value="">— Select your name —</option></select>
         </div>
+        <div class="form-group" id="behalf-group" style="display:none;">
+          <label>Pour le compte de <span style="font-size:.78rem;color:var(--muted);">(optionnel)</span></label>
+          <select id="mv-behalf" onchange="fillSels();updateInfo();"><option value="">— Même personne —</option></select>
+        </div>
         <div class="form-group">
           <label id="lbl-type">Type</label>
           <select id="mv-type" onchange="fillSels();updateInfo();">
@@ -1077,9 +1081,11 @@ function fillSels(){
   // Fill custom picker for mv-item — filter by what person has out if retour
   const mvType = document.getElementById('mv-type')?.value || 'sortie';
   const mvName = document.getElementById('mv-name')?.value || '';
+  const mvBehalf = document.getElementById('mv-behalf')?.value || '';
+  const filterName = (mvType === 'retour' && mvBehalf) ? mvBehalf : mvName;
   let pickerItems = items.filter(it=>!hidden.includes(it.id));
-  if(mvType === 'retour' && mvName){
-    const out = getItemsOutForPerson(mvName);
+  if(mvType === 'retour' && filterName){
+    const out = getItemsOutForPerson(filterName);
     if(out.length) pickerItems = out.map(e=>e.item).filter(Boolean);
     else pickerItems = [];
   }
@@ -1178,6 +1184,8 @@ function updateInfo(){
   const type=document.getElementById('mv-type').value;
   const damageBox=document.getElementById('retour-damage-box');
   if(damageBox) damageBox.style.display = (type==='retour' && id) ? 'block' : 'none';
+  const behalfGroup = document.getElementById('behalf-group');
+  if(behalfGroup) behalfGroup.style.display = type==='retour' ? 'block' : 'none';
   if(!id){el.classList.remove('show');return;}
   const it=items.find(i=>i.id===id);if(!it){el.classList.remove('show');return;}
   const dmg=damages.find(d=>d.item_id===id&&!d.resolved);
@@ -1271,6 +1279,9 @@ let _partialReturnConfirmed = false;
 async function submitMv(){
   const type  = document.getElementById('mv-type').value;
   const name  = document.getElementById('mv-name').value;
+  const behalf = document.getElementById('mv-behalf')?.value || '';
+  const logPerson = (type==='retour' && behalf) ? behalf : name;
+  const displayPerson = (type==='retour' && behalf) ? name+' (pour '+behalf+')' : name;
   const notes = document.getElementById('mv-notes').value.trim();
   const al    = document.getElementById('al-mv');
   if(!name)       return shAl(al,'error','Please select your name.');
@@ -1285,9 +1296,8 @@ async function submitMv(){
 
   // Check if person still has other items out after this return
   if(type === 'retour' && !_partialReturnConfirmed){
-    const name = document.getElementById('mv-name').value;
     const returningIds = cart.map(c=>c.itemId);
-    const stillOut = getItemsOutForPerson(name).filter(e => !returningIds.includes(e.id));
+    const stillOut = getItemsOutForPerson(logPerson).filter(e => !returningIds.includes(e.id));
     if(stillOut.length > 0){
       const list = document.getElementById('partial-return-list');
       list.innerHTML = stillOut.map(e=>`<div>📦 <strong>${e.item.name}</strong> × ${e.qty}</div>`).join('');
@@ -1308,7 +1318,7 @@ async function submitMv(){
       else if(type==='retour' && newAvail!==null) newAvail = it.qty!==null ? Math.min(it.qty, newAvail+c.qty) : newAvail+c.qty;
       const ops = [
         sbUpdate('items', c.itemId, {avail:newAvail, updated_at:new Date().toISOString()}),
-        sbInsert('log_entries', {id:now+i, type, item_id:c.itemId, item_name:c.itemName, loc:'Salle d\'entreposage', qty:c.qty, person:name, notes, photos:'[]'})
+        sbInsert('log_entries', {id:now+i, type, item_id:c.itemId, item_name:c.itemName, loc:'Salle d\'entreposage', qty:c.qty, person:logPerson, notes:(displayPerson!==logPerson?'Retourné par '+name+(notes?', '+notes:''): notes), photos:'[]'})
       ];
       // File damage report if flagged
       if(c.damaged && c.dmgDesc){
@@ -1360,7 +1370,9 @@ function defectAnswer(hasDefect){
 
 function resetMv(){
   cart=[];
-  ['mv-item','mv-name','mv-notes'].forEach(id=>document.getElementById(id).value='');
+  ['mv-item','mv-name','mv-notes','mv-behalf'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const behalfGroup=document.getElementById('behalf-group');
+  if(behalfGroup) behalfGroup.style.display='none';
   document.getElementById('mv-item-label').textContent='— Choisir —';
   document.getElementById('mv-item-search').value='';
   renderItemPicker('');
@@ -1725,9 +1737,11 @@ function fillLocDropdowns(){
 
 function fillNameDropdowns(){
   fillLocDropdowns();
-  ['mv-name','sig-name'].forEach(sid => {
+  ['mv-name','sig-name','mv-behalf'].forEach(sid => {
     const s = document.getElementById(sid), cur = s.value;
-    s.innerHTML = '<option value="">— Select your name —</option>';
+    s.innerHTML = sid==='mv-behalf'
+      ? '<option value="">— Même personne —</option>'
+      : '<option value="">— Select your name —</option>';
     teamNames.forEach(n => {
       const o = document.createElement('option');
       o.value = n; o.textContent = n;
